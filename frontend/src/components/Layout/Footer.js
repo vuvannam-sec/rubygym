@@ -1,7 +1,14 @@
+import BrandLogo from './BrandLogo';
+
 function Footer() {
   return (
     <footer className="footer">
-      <p>RubyGYM - He thong quan ly phong gym phuc vu mon hoc Cong nghe Phan mem.</p>
+      <div className="footer-inner">
+        <div className="footer-brand">
+          <BrandLogo to="/" subtitle="Fitness center management" />
+        </div>
+        <p>© 2026 RubyGYM. Nền tảng quản lý phòng gym dành cho vận hành, huấn luyện và chăm sóc hội viên.</p>
+      </div>
     </footer>
   );
 }

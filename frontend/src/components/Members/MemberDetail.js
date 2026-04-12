@@ -13,7 +13,7 @@ function MemberDetail() {
         const { data } = await api.get(`/members/${id}`);
         setMember(data);
       } catch (requestError) {
-        setError('Khong tai duoc thong tin hoi vien.');
+        setError('Không tải được thông tin hội viên.');
       }
     }
 
@@ -22,16 +22,16 @@ function MemberDetail() {
 
   return (
     <section className="page-card">
-      <h1>Chi tiet hoi vien</h1>
+      <h1>Chi tiết hội viên</h1>
       {error ? <p className="error-text">{error}</p> : null}
       {member ? (
         <div className="detail-grid">
-          <p><strong>Ho ten:</strong> {member.full_name}</p>
+          <p><strong>Họ tên:</strong> {member.full_name}</p>
           <p><strong>Email:</strong> {member.email}</p>
-          <p><strong>So dien thoai:</strong> {member.phone}</p>
-          <p><strong>Ngay tham gia:</strong> {String(member.join_date).slice(0, 10)}</p>
-          <p><strong>Loyal:</strong> {member.is_loyal ? 'Co' : 'Khong'}</p>
-          <p><strong>HLV:</strong> {member.trainer_name || 'Chua phan cong'}</p>
+          <p><strong>Số điện thoại:</strong> {member.phone}</p>
+          <p><strong>Ngày tham gia:</strong> {String(member.join_date).slice(0, 10)}</p>
+          <p><strong>Hội viên thân thiết:</strong> {member.is_loyal ? 'Có' : 'Không'}</p>
+          <p><strong>HLV:</strong> {member.trainer_name || 'Chưa phân công'}</p>
         </div>
       ) : null}
     </section>

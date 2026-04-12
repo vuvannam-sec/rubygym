@@ -78,6 +78,7 @@ describe('Schedule Routes', () => {
 
     pool.execute
       .mockResolvedValueOnce([[{ id: 2 }]])
+      .mockResolvedValueOnce([[]])
       .mockResolvedValueOnce([[{ total_minutes: 480 }]]);
 
     const res = await request(app)
@@ -95,14 +96,46 @@ describe('Schedule Routes', () => {
     expect(res.body.error).toBe('Trainer has reached 8h limit for this day');
   });
 
+  test('POST /api/schedule should reject a member taking two sessions in the same period', async () => {
+    const token = createToken({ id: 5, role: 'TRAINER', email: 'trainer@rubygym.com' });
+
+    pool.execute
+      .mockResolvedValueOnce([[{ id: 2 }]])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[{ total_minutes: 60 }]])
+      .mockResolvedValueOnce([[{ id: 4, trainer_id: 2 }]])
+      .mockResolvedValueOnce([[{ member_id: 4, start_time: '06:00:00', end_time: '07:00:00' }]]);
+
+    const res = await request(app)
+      .post('/api/schedule')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        trainer_id: 2,
+        session_date: '2026-04-14',
+        start_time: '09:00:00',
+        end_time: '10:00:00',
+        member_ids: [4]
+      });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toBe('Member can only join one session in each period (morning, afternoon, evening)');
+  });
+
   test('POST /api/schedule should create a valid session', async () => {
     const token = createToken({ id: 5, role: 'TRAINER', email: 'trainer@rubygym.com' });
 
     pool.execute
       .mockResolvedValueOnce([[{ id: 2 }]])
+      .mockResolvedValueOnce([[]])
       .mockResolvedValueOnce([[{ total_minutes: 120 }]])
       .mockResolvedValueOnce([[{ id: 4, trainer_id: 2 }, { id: 5, trainer_id: 2 }]])
-      .mockResolvedValueOnce([[{ member_id: 4, total_sessions: 1 }, { member_id: 5, total_sessions: 2 }]])
+      .mockResolvedValueOnce([
+        [
+          { member_id: 4, start_time: '05:30:00', end_time: '06:30:00' },
+          { member_id: 5, start_time: '05:30:00', end_time: '06:30:00' },
+          { member_id: 5, start_time: '17:00:00', end_time: '18:00:00' }
+        ]
+      ])
       .mockResolvedValueOnce([{ insertId: 88 }])
       .mockResolvedValueOnce([{}])
       .mockResolvedValueOnce([{}])

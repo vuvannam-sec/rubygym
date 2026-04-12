@@ -1,48 +1,44 @@
-import { useEffect, useState } from 'react';
-import api from '../../services/api';
+import { FiActivity, FiClock, FiUsers } from 'react-icons/fi';
+import { trainerStats, trainerMembers } from '../../data/mockData';
+import { MetricCard, SectionHeader } from '../Layout/ProductUI';
 
 function TrainerDashboard() {
-  const [stats, setStats] = useState({
-    evaluations: 0,
-    subscriptions: 0
-  });
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    async function loadTrainerData() {
-      try {
-        const [evaluations, subscriptions] = await Promise.all([
-          api.get('/evaluations'),
-          api.get('/subscriptions')
-        ]);
-
-        setStats({
-          evaluations: evaluations.data.length,
-          subscriptions: subscriptions.data.length
-        });
-      } catch (requestError) {
-        setError('Khong tai duoc thong tin cua huynh luyen vien.');
-      }
-    }
-
-    loadTrainerData();
-  }, []);
+  const statIcons = {
+    'Số học viên': <FiUsers />,
+    'Buổi tập hôm nay': <FiActivity />,
+    'Giờ làm hôm nay': <FiClock />
+  };
 
   return (
     <section className="page-card">
-      <h1>Dashboard huynh luyen vien</h1>
+      <SectionHeader
+        eyebrow="Trainer workspace"
+        title="Tổng quan huấn luyện"
+        subtitle="Ưu tiên lịch hôm nay, theo dõi mức độ tuân thủ và quản lý tiến độ của học viên."
+      />
       <div className="stats-grid">
-        <article className="stat-card">
-          <h3>Danh gia da tao</h3>
-          <strong>{stats.evaluations}</strong>
-        </article>
-        <article className="stat-card">
-          <h3>Goi tap cua hoc vien</h3>
-          <strong>{stats.subscriptions}</strong>
-        </article>
+        {trainerStats.map((stat) => (
+          <MetricCard key={stat.label} icon={statIcons[stat.label]} label={stat.label} value={stat.value} caption={stat.caption} />
+        ))}
       </div>
-      <p>Goi y: mo muc lich tap va danh gia de quan ly hoc vien trong thang.</p>
-      {error ? <p className="error-text">{error}</p> : null}
+      <article className="dashboard-panel">
+        <div className="panel-heading">
+          <div>
+            <h3>Học viên cần theo dõi sát</h3>
+            <p>Danh sách ưu tiên cho buổi tư vấn và đánh giá kế tiếp.</p>
+          </div>
+        </div>
+        <div className="priority-grid">
+          {trainerMembers.map((member) => (
+            <div key={member.id} className="priority-card">
+              <strong>{member.name}</strong>
+              <p>Mục tiêu: {member.goal}</p>
+              <p>Lần tập tiếp theo: {member.nextSession}</p>
+              <span>Tỷ lệ tuân thủ {member.adherence}</span>
+            </div>
+          ))}
+        </div>
+      </article>
     </section>
   );
 }

@@ -14,6 +14,26 @@ const getMemberIdByUser = async (userId) => {
   return rows.length > 0 ? rows[0].id : null;
 };
 
+const syncLoyaltyStatus = async (memberId) => {
+  const [rows] = await pool.execute('SELECT id, join_date, is_loyal FROM members WHERE id = ?', [memberId]);
+  if (rows.length === 0) {
+    return null;
+  }
+
+  const member = rows[0];
+  const now = new Date();
+  const loyalCutoff = new Date(now);
+  loyalCutoff.setFullYear(loyalCutoff.getFullYear() - 1);
+  const shouldBeLoyal = new Date(member.join_date) <= loyalCutoff;
+
+  if (shouldBeLoyal && !member.is_loyal) {
+    await pool.execute('UPDATE members SET is_loyal = 1 WHERE id = ?', [memberId]);
+    member.is_loyal = 1;
+  }
+
+  return member;
+};
+
 const canAccessMember = async (req, memberId) => {
   if (req.user.role === 'ADMIN') {
     return true;
@@ -60,7 +80,8 @@ router.get('/:id', authenticate, async (req, res) => {
     }
 
     const [rows] = await pool.execute(`
-      SELECT m.*, u.full_name, u.email, u.phone, t_u.full_name as trainer_name
+      SELECT m.*, u.full_name, u.email, u.phone,
+             t_u.full_name as trainer_name, t_u.email as trainer_email, t_u.phone as trainer_phone
       FROM members m
       JOIN users u ON m.user_id = u.id
       LEFT JOIN trainers t ON m.trainer_id = t.id
@@ -69,7 +90,44 @@ router.get('/:id', authenticate, async (req, res) => {
     `, [req.params.id]);
     
     if (rows.length === 0) return res.status(404).json({ error: 'Member not found' });
-    res.json(rows[0]);
+    const syncedMember = await syncLoyaltyStatus(req.params.id);
+    res.json({
+      ...rows[0],
+      is_loyal: Boolean(syncedMember?.is_loyal),
+      referral_code: `RUBY-${rows[0].id}`
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get referral details
+router.get('/:id/referrals', authenticate, async (req, res) => {
+  try {
+    const allowed = await canAccessMember(req, req.params.id);
+    if (!allowed) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const [memberRows] = await pool.execute('SELECT id FROM members WHERE id = ?', [req.params.id]);
+    if (memberRows.length === 0) {
+      return res.status(404).json({ error: 'Member not found' });
+    }
+
+    const [referralRows] = await pool.execute(`
+      SELECT m.id, u.full_name, u.email, m.join_date
+      FROM members m
+      JOIN users u ON m.user_id = u.id
+      WHERE m.referred_by = ?
+      ORDER BY m.join_date DESC, u.full_name
+    `, [req.params.id]);
+
+    res.json({
+      member_id: Number(req.params.id),
+      referral_code: `RUBY-${req.params.id}`,
+      referral_link: `https://rubygym.vn/invite/RUBY-${req.params.id}`,
+      referred_members: referralRows
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

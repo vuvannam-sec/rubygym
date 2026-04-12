@@ -41,11 +41,11 @@ router.get('/:id', async (req, res) => {
 // Create event
 router.post('/', authenticate, authorize('ADMIN'), async (req, res) => {
   try {
-    const { title, description, event_date } = req.body;
+    const { title, description, event_date, image_url } = req.body;
 
     const [result] = await pool.execute(
-      'INSERT INTO events (title, description, event_date, created_by) VALUES (?, ?, ?, ?)',
-      [title, description || null, event_date || null, req.user.id]
+      'INSERT INTO events (title, description, event_date, image_url, created_by) VALUES (?, ?, ?, ?, ?)',
+      [title, description || null, event_date || null, image_url || null, req.user.id]
     );
 
     res.status(201).json({ message: 'Event created', eventId: result.insertId });
@@ -63,14 +63,15 @@ router.put('/:id', authenticate, authorize('ADMIN'), async (req, res) => {
     }
 
     const existing = rows[0];
-    const { title, description, event_date } = req.body;
+    const { title, description, event_date, image_url } = req.body;
 
     await pool.execute(
-      'UPDATE events SET title = ?, description = ?, event_date = ? WHERE id = ?',
+      'UPDATE events SET title = ?, description = ?, event_date = ?, image_url = ? WHERE id = ?',
       [
         title || existing.title,
         description !== undefined ? description : existing.description,
         event_date || existing.event_date,
+        image_url !== undefined ? image_url : existing.image_url,
         req.params.id
       ]
     );

@@ -66,8 +66,8 @@ const getSubscriptionMeta = async (memberId, startDate, planType) => {
   }
 
   const member = memberRows[0];
-  const start = new Date(startDate);
-  const loyalCheckDate = new Date(startDate);
+  const today = new Date();
+  const loyalCheckDate = new Date(today);
   loyalCheckDate.setFullYear(loyalCheckDate.getFullYear() - 1);
 
   const isLoyal = Boolean(member.is_loyal) || new Date(member.join_date) <= loyalCheckDate;
@@ -75,27 +75,28 @@ const getSubscriptionMeta = async (memberId, startDate, planType) => {
     await pool.execute('UPDATE members SET is_loyal = 1 WHERE id = ?', [memberId]);
   }
 
-  const [referralRows] = await pool.execute(
-    'SELECT COUNT(*) as total_referrals FROM members WHERE referred_by = ?',
+  const [subscriptionRows] = await pool.execute(
+    'SELECT id FROM subscriptions WHERE member_id = ?',
     [memberId]
   );
 
-  const referralMonths = Number(referralRows[0].total_referrals || 0);
-  const loyalBonusMonths = isLoyal ? 3 : 0;
-  const totalMonths = (PLAN_MONTHS[planType] || 0) + loyalBonusMonths + referralMonths;
+  const isRenewal = subscriptionRows.length > 0;
+  const loyalBonusMonths = isLoyal && isRenewal ? 3 : 0;
+  const totalMonths = (PLAN_MONTHS[planType] || 0) + loyalBonusMonths;
 
   if (!totalMonths) {
     throw new Error('Invalid plan type');
   }
 
-  const today = new Date().toISOString().split('T')[0];
+  const start = new Date(startDate);
+  const todayString = new Date().toISOString().split('T')[0];
 
   return {
     isLoyal,
+    isRenewal,
     loyalBonusMonths,
-    referralMonths,
     endDate: addMonths(startDate, totalMonths),
-    status: start >= new Date(today) || startDate === today ? 'ACTIVE' : 'ACTIVE'
+    status: start >= new Date(todayString) || startDate === todayString ? 'ACTIVE' : 'ACTIVE'
   };
 };
 
@@ -103,7 +104,7 @@ const getSubscriptionMeta = async (memberId, startDate, planType) => {
 router.get('/', authenticate, async (req, res) => {
   try {
     let query = `
-      SELECT s.*, u.full_name as member_name, u.email as member_email
+      SELECT s.*, u.full_name as member_name, u.email as member_email, m.join_date, m.is_loyal
       FROM subscriptions s
       JOIN members m ON s.member_id = m.id
       JOIN users u ON m.user_id = u.id
@@ -122,7 +123,7 @@ router.get('/', authenticate, async (req, res) => {
 
     query += ' ORDER BY s.start_date DESC';
     const [rows] = await pool.execute(query, params);
-    res.json(rows);
+    res.json(rows.map((row) => ({ ...row, is_loyal: Boolean(row.is_loyal) })));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -137,7 +138,7 @@ router.get('/:id', authenticate, async (req, res) => {
     }
 
     const [rows] = await pool.execute(`
-      SELECT s.*, u.full_name as member_name, u.email as member_email
+      SELECT s.*, u.full_name as member_name, u.email as member_email, m.join_date, m.is_loyal
       FROM subscriptions s
       JOIN members m ON s.member_id = m.id
       JOIN users u ON m.user_id = u.id
@@ -148,7 +149,7 @@ router.get('/:id', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Subscription not found' });
     }
 
-    res.json(rows[0]);
+    res.json({ ...rows[0], is_loyal: Boolean(rows[0].is_loyal) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -189,7 +190,8 @@ router.post('/', authenticate, async (req, res) => {
       message: 'Subscription created',
       subscriptionId: result.insertId,
       is_loyal: meta.isLoyal,
-      free_extension_months: meta.loyalBonusMonths + meta.referralMonths,
+      is_renewal: meta.isRenewal,
+      free_extension_months: meta.loyalBonusMonths,
       end_date: meta.endDate
     });
   } catch (err) {
@@ -238,7 +240,8 @@ router.put('/:id', authenticate, async (req, res) => {
     res.json({
       message: 'Subscription updated',
       is_loyal: meta.isLoyal,
-      free_extension_months: meta.loyalBonusMonths + meta.referralMonths,
+      is_renewal: meta.isRenewal,
+      free_extension_months: meta.loyalBonusMonths,
       end_date: meta.endDate
     });
   } catch (err) {

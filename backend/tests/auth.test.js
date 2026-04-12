@@ -14,8 +14,10 @@ describe('Auth Routes', () => {
     jest.clearAllMocks();
   });
 
-  test('POST /api/auth/register should create a new user', async () => {
-    pool.execute.mockResolvedValueOnce([{ insertId: 11 }]);
+  test('POST /api/auth/register should create a new member account', async () => {
+    pool.execute
+      .mockResolvedValueOnce([{ insertId: 11 }])
+      .mockResolvedValueOnce([{ insertId: 7 }]);
 
     const res = await request(app)
       .post('/api/auth/register')
@@ -29,10 +31,36 @@ describe('Auth Routes', () => {
     expect(res.statusCode).toBe(201);
     expect(res.body.message).toBe('User registered');
     expect(res.body.userId).toBe(11);
+    expect(res.body.memberId).toBe(7);
     expect(pool.execute).toHaveBeenCalledWith(
       'INSERT INTO users (email, password_hash, full_name, phone, role) VALUES (?, ?, ?, ?, ?)',
       expect.arrayContaining(['new.member@rubygym.com', expect.any(String), 'New Member', '0909999999', 'MEMBER'])
     );
+  });
+
+  test('POST /api/auth/register should accept trainer choice and referral code', async () => {
+    pool.execute
+      .mockResolvedValueOnce([[{ id: 3 }]])
+      .mockResolvedValueOnce([[{ id: 9 }]])
+      .mockResolvedValueOnce([{ insertId: 12 }])
+      .mockResolvedValueOnce([{ insertId: 8 }])
+      .mockResolvedValueOnce([[{ id: 5, end_date: '2026-08-01' }]])
+      .mockResolvedValueOnce([{}]);
+
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send({
+        email: 'ref.new@rubygym.com',
+        password: 'member123',
+        full_name: 'Referral Member',
+        phone: '0908888888',
+        trainer_id: 3,
+        referral_code: 'RUBY-9'
+      });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.referral_applied).toBe(true);
+    expect(res.body.trainer_assigned).toBe(true);
   });
 
   test('POST /api/auth/login should return token with valid credentials', async () => {

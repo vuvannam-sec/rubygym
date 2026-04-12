@@ -44,6 +44,51 @@ const validateTrainerOwnClient = async (trainerId, memberId) => {
   return rows.length > 0;
 };
 
+const normalizeMonthDate = (monthValue) => {
+  if (!monthValue) {
+    return null;
+  }
+
+  if (/^\d{4}-\d{2}$/.test(String(monthValue))) {
+    return `${monthValue}-01`;
+  }
+
+  const date = new Date(monthValue);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
+};
+
+const compareToTarget = (target, actual) => {
+  if (target === null || target === undefined || actual === null || actual === undefined) {
+    return 'PENDING';
+  }
+
+  const difference = Number(actual) - Number(target);
+
+  if (Math.abs(difference) <= 0.1) {
+    return 'MAINTAINED';
+  }
+
+  return difference < 0 ? 'IMPROVED' : 'DECLINED';
+};
+
+const withProgress = (evaluation) => ({
+  ...evaluation,
+  weight_progress: compareToTarget(evaluation.target_weight, evaluation.actual_weight),
+  bmi_progress: compareToTarget(evaluation.target_bmi, evaluation.actual_bmi)
+});
+
+const findDuplicateMonthEvaluation = async (memberId, monthDate, excludeId) => {
+  const [rows] = await pool.execute(
+    'SELECT id FROM monthly_evaluations WHERE member_id = ? AND month_year = ? AND id <> ?',
+    [memberId, monthDate, excludeId || 0]
+  );
+  return rows.length > 0;
+};
+
 // Get evaluations
 router.get('/', authenticate, async (req, res) => {
   try {
@@ -69,7 +114,7 @@ router.get('/', authenticate, async (req, res) => {
 
     query += ' ORDER BY me.month_year DESC, me.created_at DESC';
     const [rows] = await pool.execute(query, params);
-    res.json(rows);
+    res.json(rows.map(withProgress));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -97,7 +142,7 @@ router.get('/:id', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Evaluation not found' });
     }
 
-    res.json(rows[0]);
+    res.json(withProgress(rows[0]));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -126,16 +171,35 @@ router.post('/', authenticate, async (req, res) => {
       finalTrainerId = await getTrainerIdByUser(req.user.id);
     }
 
+    const normalizedMonth = normalizeMonthDate(month_year);
+    if (!normalizedMonth) {
+      return res.status(400).json({ error: 'Invalid evaluation month' });
+    }
+
     const validOwner = await validateTrainerOwnClient(finalTrainerId, member_id);
     if (!validOwner) {
       return res.status(400).json({ error: 'Trainer can only evaluate their own clients' });
+    }
+
+    const duplicated = await findDuplicateMonthEvaluation(member_id, normalizedMonth);
+    if (duplicated) {
+      return res.status(400).json({ error: 'Monthly evaluation already exists for this member' });
     }
 
     const [result] = await pool.execute(
       `INSERT INTO monthly_evaluations
        (member_id, trainer_id, month_year, target_weight, actual_weight, target_bmi, actual_bmi, notes)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [member_id, finalTrainerId, month_year, target_weight, actual_weight, target_bmi, actual_bmi, notes || null]
+      [
+        member_id,
+        finalTrainerId,
+        normalizedMonth,
+        target_weight,
+        actual_weight !== undefined ? actual_weight : null,
+        target_bmi,
+        actual_bmi !== undefined ? actual_bmi : null,
+        notes || null
+      ]
     );
 
     res.status(201).json({ message: 'Evaluation created', evaluationId: result.insertId });
@@ -165,9 +229,19 @@ router.put('/:id', authenticate, async (req, res) => {
     }
 
     const memberId = req.body.member_id || existing.member_id;
+    const monthValue = normalizeMonthDate(req.body.month_year || existing.month_year);
+    if (!monthValue) {
+      return res.status(400).json({ error: 'Invalid evaluation month' });
+    }
+
     const validOwner = await validateTrainerOwnClient(trainerId, memberId);
     if (!validOwner) {
       return res.status(400).json({ error: 'Trainer can only evaluate their own clients' });
+    }
+
+    const duplicated = await findDuplicateMonthEvaluation(memberId, monthValue, req.params.id);
+    if (duplicated) {
+      return res.status(400).json({ error: 'Monthly evaluation already exists for this member' });
     }
 
     await pool.execute(
@@ -178,7 +252,7 @@ router.put('/:id', authenticate, async (req, res) => {
       [
         memberId,
         trainerId,
-        req.body.month_year || existing.month_year,
+        monthValue,
         req.body.target_weight !== undefined ? req.body.target_weight : existing.target_weight,
         req.body.actual_weight !== undefined ? req.body.actual_weight : existing.actual_weight,
         req.body.target_bmi !== undefined ? req.body.target_bmi : existing.target_bmi,

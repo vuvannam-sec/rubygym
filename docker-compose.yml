@@ -7,11 +7,11 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - ./rubygym/docker:/docker-entrypoint-initdb.d
+      - ./docker:/docker-entrypoint-initdb.d
       - mysql_data:/var/lib/mysql
 
   backend:
-    build: ./rubygym/backend
+    build: ./backend
     ports:
       - "3000:3000"
     environment:
@@ -25,7 +25,7 @@ services:
       - db
 
   frontend:
-    build: ./rubygym/frontend
+    build: ./frontend
     ports:
       - "80:80"
     depends_on:

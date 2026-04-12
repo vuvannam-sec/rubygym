@@ -1,61 +1,73 @@
-import { useEffect, useState } from 'react';
-import api from '../../services/api';
+import { FiActivity, FiCreditCard, FiDollarSign, FiUsers } from 'react-icons/fi';
+import { adminStats, recentActivities } from '../../data/mockData';
+import { MetricCard, SectionHeader, StatusBadge } from '../Layout/ProductUI';
 
 function AdminDashboard() {
-  const [stats, setStats] = useState({
-    trainers: 0,
-    members: 0,
-    subscriptions: 0,
-    events: 0
-  });
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    async function loadStats() {
-      try {
-        const [trainers, members, subscriptions, events] = await Promise.all([
-          api.get('/trainers'),
-          api.get('/members'),
-          api.get('/subscriptions'),
-          api.get('/events')
-        ]);
-
-        setStats({
-          trainers: trainers.data.length,
-          members: members.data.length,
-          subscriptions: subscriptions.data.length,
-          events: events.data.length
-        });
-      } catch (requestError) {
-        setError('Khong tai duoc so lieu dashboard.');
-      }
-    }
-
-    loadStats();
-  }, []);
+  const statIcons = {
+    'Tổng hội viên': <FiUsers />,
+    'HLV đang hoạt động': <FiActivity />,
+    'Gói tập active': <FiCreditCard />,
+    'Doanh thu tháng': <FiDollarSign />
+  };
 
   return (
     <section className="page-card">
-      <h1>Dashboard quan tri</h1>
+      <SectionHeader
+        eyebrow="Admin dashboard"
+        title="Tổng quan vận hành"
+        subtitle="Theo dõi sức khỏe kinh doanh, trạng thái hệ thống và các hoạt động mới nhất của phòng gym."
+      />
       <div className="stats-grid">
-        <article className="stat-card">
-          <h3>Huynh luyen vien</h3>
-          <strong>{stats.trainers}</strong>
+        {adminStats.map((stat) => (
+          <MetricCard key={stat.label} icon={statIcons[stat.label]} label={stat.label} value={stat.value} caption={stat.caption} />
+        ))}
+      </div>
+
+      <div className="dashboard-grid">
+        <article className="dashboard-panel">
+          <div className="panel-heading">
+            <div>
+              <h3>Hoạt động gần đây</h3>
+              <p>Dòng công việc mới nhất từ vận hành và đội ngũ chăm sóc hội viên.</p>
+            </div>
+            <StatusBadge tone="success">Đang ổn định</StatusBadge>
+          </div>
+          <div className="activity-list">
+            {recentActivities.map((activity) => (
+              <div key={activity.id} className="activity-item">
+                <div className={`activity-dot tone-${activity.tone}`} />
+                <div>
+                  <strong>{activity.title}</strong>
+                  <p>{activity.time}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </article>
-        <article className="stat-card">
-          <h3>Hoi vien</h3>
-          <strong>{stats.members}</strong>
-        </article>
-        <article className="stat-card">
-          <h3>Goi tap</h3>
-          <strong>{stats.subscriptions}</strong>
-        </article>
-        <article className="stat-card">
-          <h3>Su kien</h3>
-          <strong>{stats.events}</strong>
+
+        <article className="dashboard-panel">
+          <div className="panel-heading">
+            <div>
+              <h3>Tín hiệu nổi bật</h3>
+              <p>Những chỉ số cần ưu tiên trong 7 ngày tiếp theo.</p>
+            </div>
+          </div>
+          <div className="insight-list">
+            <div className="insight-item">
+              <span>Khung giờ 18:00 - 20:00</span>
+              <strong>Đạt 94% công suất</strong>
+            </div>
+            <div className="insight-item">
+              <span>Gia hạn sắp tới</span>
+              <strong>16 hội viên trong 10 ngày</strong>
+            </div>
+            <div className="insight-item">
+              <span>Hiệu suất chuyển đổi lead</span>
+              <strong>31% từ gói dùng thử</strong>
+            </div>
+          </div>
         </article>
       </div>
-      {error ? <p className="error-text">{error}</p> : null}
     </section>
   );
 }

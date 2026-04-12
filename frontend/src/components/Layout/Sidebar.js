@@ -1,42 +1,68 @@
+import { useState } from 'react';
+import {
+  FiActivity,
+  FiArrowLeft,
+  FiArrowRight,
+  FiBarChart2,
+  FiBell,
+  FiCalendar,
+  FiClipboard,
+  FiCreditCard,
+  FiGift,
+  FiHome,
+  FiUsers
+} from 'react-icons/fi';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import BrandLogo from './BrandLogo';
 
 const roleLinks = {
   ADMIN: [
-    { to: '/dashboard/admin', label: 'Dashboard Admin' },
-    { to: '/trainers', label: 'Quan ly HLV' },
-    { to: '/members', label: 'Quan ly hoi vien' },
-    { to: '/schedule/create', label: 'Tao lich tap' },
-    { to: '/evaluations', label: 'Danh gia' },
-    { to: '/subscriptions', label: 'Goi tap' }
+    { to: '/admin', label: 'Tổng quan', icon: <FiHome /> },
+    { to: '/admin/trainers', label: 'Huấn luyện viên', icon: <FiActivity /> },
+    { to: '/admin/members', label: 'Hội viên', icon: <FiUsers /> },
+    { to: '/admin/subscriptions', label: 'Gói tập', icon: <FiCreditCard /> },
+    { to: '/admin/events', label: 'Sự kiện', icon: <FiBell /> },
+    { to: '/admin/reports', label: 'Thống kê', icon: <FiBarChart2 /> }
   ],
   TRAINER: [
-    { to: '/dashboard/trainer', label: 'Dashboard HLV' },
-    { to: '/trainers', label: 'Danh sach HLV' },
-    { to: '/members', label: 'Hoi vien' },
-    { to: '/schedule/create', label: 'Tao buoi tap' },
-    { to: '/evaluations', label: 'Danh gia' },
-    { to: '/subscriptions', label: 'Goi tap' }
+    { to: '/trainer', label: 'Tổng quan', icon: <FiHome /> },
+    { to: '/trainer/members', label: 'Học viên của tôi', icon: <FiUsers /> },
+    { to: '/trainer/schedule', label: 'Lịch tập', icon: <FiCalendar /> },
+    { to: '/trainer/evaluations', label: 'Đánh giá tháng', icon: <FiClipboard /> }
   ],
   MEMBER: [
-    { to: '/dashboard/member', label: 'Dashboard hoi vien' },
-    { to: '/subscriptions', label: 'Tinh trang goi tap' },
-    { to: '/subscriptions/new', label: 'Dang ky goi moi' },
-    { to: '/evaluations', label: 'Danh gia hang thang' }
+    { to: '/member', label: 'Tổng quan', icon: <FiHome /> },
+    { to: '/member/schedule', label: 'Lịch tập của tôi', icon: <FiCalendar /> },
+    { to: '/member/results', label: 'Kết quả đánh giá', icon: <FiBarChart2 /> },
+    { to: '/member/subscriptions', label: 'Gói tập', icon: <FiCreditCard /> },
+    { to: '/member/referrals', label: 'Giới thiệu bạn', icon: <FiGift /> }
   ]
 };
 
 function Sidebar() {
   const { user } = useAuth();
+  const [collapsed, setCollapsed] = useState(false);
   const links = roleLinks[user?.role] || [];
+  const title = user?.role === 'ADMIN' ? 'Admin Workspace' : user?.role === 'TRAINER' ? 'Trainer Workspace' : 'Member Workspace';
 
   return (
-    <aside className="sidebar">
-      <h2>Dieu huong</h2>
+    <aside className={`sidebar sidebar-product ${collapsed ? 'collapsed' : ''}`}>
+      <div className="sidebar-top">
+        <div className="sidebar-brand-block">
+          <BrandLogo to="/" light subtitle="Workspace" />
+          <p className="sidebar-eyebrow">Workspace</p>
+          <h2>{title}</h2>
+        </div>
+        <button type="button" className="icon-button sidebar-toggle" onClick={() => setCollapsed((current) => !current)}>
+          {collapsed ? <FiArrowRight /> : <FiArrowLeft />}
+        </button>
+      </div>
       <div className="sidebar-links">
         {links.map((link) => (
           <NavLink key={link.to} to={link.to}>
-            {link.label}
+            <span className="sidebar-icon">{link.icon}</span>
+            <span className="sidebar-label">{link.label}</span>
           </NavLink>
         ))}
       </div>

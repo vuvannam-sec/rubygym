@@ -7,6 +7,7 @@ const MORNING_START = 5 * 60;
 const MORNING_END = 11 * 60 + 30;
 const AFTERNOON_START = 13 * 60 + 30;
 const AFTERNOON_END = 20 * 60;
+const EVENING_START = 17 * 60;
 
 const toMinutes = (time) => {
   const [hours, minutes] = String(time).split(':').map(Number);
@@ -14,6 +15,20 @@ const toMinutes = (time) => {
 };
 
 const getDurationMinutes = (startTime, endTime) => toMinutes(endTime) - toMinutes(startTime);
+
+const getSessionPeriod = (startTime) => {
+  const start = toMinutes(startTime);
+
+  if (start < MORNING_END) {
+    return 'MORNING';
+  }
+
+  if (start < EVENING_START) {
+    return 'AFTERNOON';
+  }
+
+  return 'EVENING';
+};
 
 const isWithinOperatingHours = (startTime, endTime) => {
   const start = toMinutes(startTime);
@@ -24,6 +39,24 @@ const isWithinOperatingHours = (startTime, endTime) => {
 
   return morningValid || afternoonValid;
 };
+
+const isWithinMonthlyCycle = (sessionDate) => {
+  const targetDate = new Date(sessionDate);
+  if (Number.isNaN(targetDate.getTime())) {
+    return false;
+  }
+
+  const now = new Date();
+  const cycleStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const cycleEnd = new Date(cycleStart);
+  cycleEnd.setDate(cycleEnd.getDate() + 31);
+
+  return targetDate >= cycleStart && targetDate <= cycleEnd;
+};
+
+const rangesOverlap = (startA, endA, startB, endB) => (
+  toMinutes(startA) < toMinutes(endB) && toMinutes(startB) < toMinutes(endA)
+);
 
 const getTrainerIdByUser = async (userId) => {
   const [rows] = await pool.execute('SELECT id FROM trainers WHERE user_id = ?', [userId]);
@@ -81,12 +114,28 @@ const validateSessionRules = async ({ trainer_id, session_date, start_time, end_
     return 'Session duration cannot exceed 2 hours';
   }
 
+  if (!isWithinMonthlyCycle(session_date)) {
+    return 'Session date must be within the monthly scheduling cycle';
+  }
+
   if (!isWithinOperatingHours(start_time, end_time)) {
     return 'Session must be within operating hours';
   }
 
   if (member_ids && member_ids.length > 3) {
     return 'A session can have at most 3 members';
+  }
+
+  const [trainerOverlapRows] = await pool.execute(`
+    SELECT id
+    FROM training_sessions
+    WHERE trainer_id = ? AND session_date = ? AND id <> ?
+      AND start_time < ? AND end_time > ?
+    LIMIT 1
+  `, [trainer_id, session_date, sessionId || 0, end_time, start_time]);
+
+  if (trainerOverlapRows.length > 0) {
+    return 'Trainer already has another session during this time';
   }
 
   const [trainerSessions] = await pool.execute(`
@@ -116,18 +165,43 @@ const validateSessionRules = async ({ trainer_id, session_date, start_time, end_
       return 'Member must belong to the selected trainer';
     }
 
-    const [memberCounts] = await pool.execute(`
-      SELECT sm.member_id, COUNT(*) as total_sessions
+    const [memberSchedules] = await pool.execute(`
+      SELECT sm.member_id, ts.start_time, ts.end_time
       FROM session_members sm
       JOIN training_sessions ts ON sm.session_id = ts.id
       WHERE ts.session_date = ? AND ts.id <> ? AND sm.member_id IN (${placeholders})
-      GROUP BY sm.member_id
     `, [session_date, sessionId || 0, ...member_ids]);
 
-    const memberCountMap = new Map(memberCounts.map((row) => [Number(row.member_id), Number(row.total_sessions)]));
-    const overloadedMember = member_ids.find((memberId) => (memberCountMap.get(Number(memberId)) || 0) >= 3);
+    const memberScheduleMap = memberSchedules.reduce((accumulator, row) => {
+      const memberId = Number(row.member_id);
+      const current = accumulator.get(memberId) || [];
+      current.push(row);
+      accumulator.set(memberId, current);
+      return accumulator;
+    }, new Map());
+
+    const overloadedMember = member_ids.find((memberId) => (memberScheduleMap.get(Number(memberId)) || []).length >= 3);
     if (overloadedMember) {
       return 'Member has reached 3 sessions for this day';
+    }
+
+    const sessionPeriod = getSessionPeriod(start_time);
+    const conflictingPeriodMember = member_ids.find((memberId) => {
+      const schedules = memberScheduleMap.get(Number(memberId)) || [];
+      return schedules.some((session) => getSessionPeriod(session.start_time) === sessionPeriod);
+    });
+
+    if (conflictingPeriodMember) {
+      return 'Member can only join one session in each period (morning, afternoon, evening)';
+    }
+
+    const overlappingMember = member_ids.find((memberId) => {
+      const schedules = memberScheduleMap.get(Number(memberId)) || [];
+      return schedules.some((session) => rangesOverlap(start_time, end_time, session.start_time, session.end_time));
+    });
+
+    if (overlappingMember) {
+      return 'Member already has another session during this time';
     }
   }
 
@@ -237,7 +311,7 @@ router.get('/:id', authenticate, async (req, res) => {
 // Create session
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { trainer_id, session_date, start_time, end_time, member_ids = [] } = req.body;
+    const { trainer_id, session_date, start_time, end_time, member_ids = [], session_type } = req.body;
 
     if (!['ADMIN', 'TRAINER'].includes(req.user.role)) {
       return res.status(403).json({ error: 'Access denied' });
@@ -263,8 +337,8 @@ router.post('/', authenticate, async (req, res) => {
     }
     
     const [result] = await pool.execute(
-      'INSERT INTO training_sessions (trainer_id, session_date, start_time, end_time) VALUES (?, ?, ?, ?)',
-      [trainer_id, session_date, start_time, end_time]
+      'INSERT INTO training_sessions (trainer_id, session_date, start_time, end_time, session_type) VALUES (?, ?, ?, ?, ?)',
+      [trainer_id, session_date, start_time, end_time, session_type || 'Cá nhân']
     );
 
     await replaceSessionMembers(result.insertId, member_ids);
@@ -295,6 +369,7 @@ router.put('/:id', authenticate, async (req, res) => {
       session_date = existing.session_date,
       start_time = existing.start_time,
       end_time = existing.end_time,
+      session_type = existing.session_type,
       member_ids = null
     } = req.body;
 
@@ -315,8 +390,8 @@ router.put('/:id', authenticate, async (req, res) => {
     }
 
     await pool.execute(
-      'UPDATE training_sessions SET trainer_id = ?, session_date = ?, start_time = ?, end_time = ? WHERE id = ?',
-      [trainer_id, session_date, start_time, end_time, req.params.id]
+      'UPDATE training_sessions SET trainer_id = ?, session_date = ?, start_time = ?, end_time = ?, session_type = ? WHERE id = ?',
+      [trainer_id, session_date, start_time, end_time, session_type || 'Cá nhân', req.params.id]
     );
 
     await replaceSessionMembers(req.params.id, finalMemberIds);

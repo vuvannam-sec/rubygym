@@ -1,8 +1,10 @@
+html,
 body {
   margin: 0;
   font-family: 'Segoe UI', sans-serif;
   background: #f1f5f9;
   color: #0f172a;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -17,6 +19,11 @@ body {
 
 a {
   color: #2563eb;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: #1d4ed8;
 }
 
 p {
@@ -27,4 +34,12 @@ h1,
 h2,
 h3 {
   margin-top: 0;
+  line-height: 1.25;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
 }

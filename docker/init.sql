@@ -48,6 +48,7 @@ CREATE TABLE training_sessions (
     session_date DATE NOT NULL,
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
+    session_type VARCHAR(100) DEFAULT 'Cá nhân',
     FOREIGN KEY (trainer_id) REFERENCES trainers(id)
 );
 
@@ -70,6 +71,7 @@ CREATE TABLE monthly_evaluations (
     actual_bmi DECIMAL(4,2),
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_member_month (member_id, month_year),
     FOREIGN KEY (member_id) REFERENCES members(id),
     FOREIGN KEY (trainer_id) REFERENCES trainers(id)
 );
@@ -79,6 +81,7 @@ CREATE TABLE events (
     title VARCHAR(255) NOT NULL,
     description TEXT,
     event_date TIMESTAMP,
+    image_url VARCHAR(500),
     created_by INT,
     FOREIGN KEY (created_by) REFERENCES users(id)
 );

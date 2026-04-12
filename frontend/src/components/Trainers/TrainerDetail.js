@@ -13,7 +13,7 @@ function TrainerDetail() {
         const { data } = await api.get(`/trainers/${id}`);
         setTrainer(data);
       } catch (requestError) {
-        setError('Khong tai duoc thong tin huynh luyen vien.');
+        setError('Không tải được thông tin huấn luyện viên.');
       }
     }
 
@@ -22,15 +22,15 @@ function TrainerDetail() {
 
   return (
     <section className="page-card">
-      <h1>Chi tiet huynh luyen vien</h1>
+      <h1>Chi tiết huấn luyện viên</h1>
       {error ? <p className="error-text">{error}</p> : null}
       {trainer ? (
         <div className="detail-grid">
-          <p><strong>Ho ten:</strong> {trainer.full_name}</p>
+          <p><strong>Họ tên:</strong> {trainer.full_name}</p>
           <p><strong>Email:</strong> {trainer.email}</p>
-          <p><strong>So dien thoai:</strong> {trainer.phone}</p>
-          <p><strong>Chuyen mon:</strong> {trainer.specialization || 'Dang cap nhat'}</p>
-          <p><strong>So gio toi da/ngay:</strong> {trainer.max_daily_hours}</p>
+          <p><strong>Số điện thoại:</strong> {trainer.phone}</p>
+          <p><strong>Chuyên môn:</strong> {trainer.specialization || 'Đang cập nhật'}</p>
+          <p><strong>Số giờ tối đa/ngày:</strong> {trainer.max_daily_hours}</p>
         </div>
       ) : null}
     </section>

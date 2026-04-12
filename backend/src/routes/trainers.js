@@ -22,6 +22,21 @@ const canAccessTrainer = async (req, trainerId) => {
   return false;
 };
 
+// Public trainer list for member registration
+router.get('/public', async (req, res) => {
+  try {
+    const [rows] = await pool.execute(`
+      SELECT t.id, u.full_name, t.specialization
+      FROM trainers t
+      JOIN users u ON t.user_id = u.id
+      ORDER BY u.full_name
+    `);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Get all trainers
 router.get('/', authenticate, async (req, res) => {
   try {

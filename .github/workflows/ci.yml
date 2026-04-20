@@ -1,37 +1,98 @@
-name: RubyGYM CI
+name: CI/CD Pipeline - RubyGYM
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-      
-      - name: Install dependencies
-        working-directory: ./backend
-        run: npm install
-      
-      - name: Run tests
-        working-directory: ./backend
-        run: npm test
-        env:
-          JWT_SECRET: test-secret
 
-  # === SECURITY SCANS - BẠN TỰ THÊM THÁNG 5 ===
-  # sast:
-  #   - Semgrep
-  # container-scan:
-  #   - Trivy
-  # dast:
-  #   - OWASP ZAP
+      - name: Install dependencies
+        run: cd backend && npm install
+
+      - name: Run tests
+        run: cd backend && npm test
+        env:
+          JWT_SECRET: test-secret-key
+
+  semgrep-sast:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Semgrep SAST scan
+        run: |
+          semgrep scan \
+            --config auto \
+            --config p/owasp-top-ten \
+            --config p/nodejs \
+            --config p/javascript \
+            --json --output semgrep-results.json \
+            --text --output semgrep-results.txt \
+            backend/src/
+        env:
+          SEMGREP_APP_TOKEN: ""
+
+      - name: Display Semgrep results
+        run: cat semgrep-results.txt
+        if: always()
+
+      - name: Upload Semgrep results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: semgrep-report
+          path: |
+            semgrep-results.json
+            semgrep-results.txt
+
+  trivy-container-scan:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t rubygym-backend:test ./backend
+
+      - name: Run Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'rubygym-backend:test'
+          format: 'table'
+          output: 'trivy-results.txt'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+      - name: Display Trivy results
+        run: cat trivy-results.txt
+        if: always()
+
+      - name: Run Trivy JSON report
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'rubygym-backend:test'
+          format: 'json'
+          output: 'trivy-results.json'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+      - name: Upload Trivy results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-report
+          path: |
+            trivy-results.txt
+            trivy-results.json

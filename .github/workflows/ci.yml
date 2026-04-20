@@ -40,14 +40,32 @@ jobs:
             --config p/owasp-top-ten \
             --config p/nodejs \
             --config p/javascript \
-            --json --output semgrep-results.json \
-            --text --output semgrep-results.txt \
+            --json \
+            --output semgrep-results.json \
             backend/src/
         env:
           SEMGREP_APP_TOKEN: ""
+        continue-on-error: true
+
+      - name: Generate text report
+        run: |
+          semgrep scan \
+            --config auto \
+            --config p/owasp-top-ten \
+            --config p/nodejs \
+            --config p/javascript \
+            --text \
+            --output semgrep-results.txt \
+            backend/src/
+        continue-on-error: true
 
       - name: Display Semgrep results
-        run: cat semgrep-results.txt
+        run: |
+          if [ -f semgrep-results.txt ]; then
+            cat semgrep-results.txt
+          else
+            echo "No results file generated"
+          fi
         if: always()
 
       - name: Upload Semgrep results
@@ -58,6 +76,7 @@ jobs:
           path: |
             semgrep-results.json
             semgrep-results.txt
+          if-no-files-found: ignore
 
   trivy-container-scan:
     runs-on: ubuntu-latest

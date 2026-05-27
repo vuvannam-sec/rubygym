@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FiCheck, FiEdit, FiEye, FiPlus, FiTrash2, FiUsers, FiX } from 'react-icons/fi';
 import { members as initialMembers } from '../../data/mockData';
 import api from '../../services/api';
@@ -14,10 +14,15 @@ function MemberList() {
   const [page, setPage] = useState(1);
   const [toast, setToast] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [viewingMember, setViewingMember] = useState(null);
   const [editingMember, setEditingMember] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
-    plan: 'Standard 6 tháng',
+    email: '',
+    password: '',
+    phone: '',
+    is_loyal: false,
     trainer: '',
     trainer_id: '',
     joinDate: '2026-04-10',
@@ -25,29 +30,42 @@ function MemberList() {
   });
   const pageSize = 4;
 
-  useEffect(() => {
-    const loadAdminData = async () => {
-      try {
-        const [memberResponse, trainerResponse] = await Promise.all([
-          api.get('/members'),
-          api.get('/trainers')
-        ]);
+  const mapMember = useCallback((member) => {
+    const fallbackMember = initialMembers.find((item) => item.id === member.id);
 
-        setMembers(memberResponse.data.map((member) => ({
-          id: member.id,
-          name: member.full_name,
-          plan: member.is_loyal ? 'Hội viên thân thiết' : 'Hội viên thường',
-          trainer: member.trainer_name || 'Chưa phân công',
-          trainer_id: member.trainer_id || '',
-          joinDate: String(member.join_date).slice(0, 10),
-          status: 'Đang hoạt động',
-          gender: member.gender || initialMembers.find((fallbackMember) => fallbackMember.id === member.id)?.gender || '',
-          avatar_url: member.avatar_url || member.avatar || initialMembers.find((fallbackMember) => fallbackMember.id === member.id)?.avatar_url || ''
-        })));
-        setTrainers(trainerResponse.data.map((trainer) => ({
-          id: trainer.id,
-          name: trainer.full_name
-        })));
+    return {
+      id: member.id,
+      name: member.full_name,
+      email: member.email || '',
+      phone: member.phone || '',
+      plan: member.is_loyal ? 'Hội viên thân thiết' : 'Hội viên thường',
+      is_loyal: Boolean(member.is_loyal),
+      trainer: member.trainer_name || 'Chưa phân công',
+      trainer_id: member.trainer_id || '',
+      joinDate: String(member.join_date).slice(0, 10),
+      status: 'Đang hoạt động',
+      gender: member.gender || fallbackMember?.gender || '',
+      avatar_url: member.avatar_url || member.avatar || fallbackMember?.avatar_url || ''
+    };
+  }, []);
+
+  const loadAdminData = useCallback(async () => {
+    const [memberResponse, trainerResponse] = await Promise.all([
+      api.get('/members'),
+      api.get('/trainers')
+    ]);
+
+    setMembers(memberResponse.data.map(mapMember));
+    setTrainers(trainerResponse.data.map((trainer) => ({
+      id: trainer.id,
+      name: trainer.full_name
+    })));
+  }, [mapMember]);
+
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        await loadAdminData();
       } catch (error) {
         setToast({
           type: 'info',
@@ -57,8 +75,8 @@ function MemberList() {
       }
     };
 
-    loadAdminData();
-  }, []);
+    loadInitialData();
+  }, [loadAdminData]);
 
   const filteredMembers = useMemo(() => members.filter((member) => (
     member.name.toLowerCase().includes(query.toLowerCase())
@@ -70,10 +88,14 @@ function MemberList() {
   const pagedMembers = filteredMembers.slice((page - 1) * pageSize, page * pageSize);
 
   const openCreateModal = () => {
+    setViewingMember(null);
     setEditingMember(null);
     setFormData({
       name: '',
-      plan: 'Standard 6 tháng',
+      email: '',
+      password: '',
+      phone: '',
+      is_loyal: false,
       trainer: '',
       trainer_id: '',
       joinDate: '2026-04-10',
@@ -82,11 +104,21 @@ function MemberList() {
     setModalOpen(true);
   };
 
+  const openViewModal = (member) => {
+    setViewingMember(member);
+    setEditingMember(null);
+    setModalOpen(true);
+  };
+
   const openEditModal = (member) => {
+    setViewingMember(null);
     setEditingMember(member);
     setFormData({
       name: member.name,
-      plan: member.plan,
+      email: member.email || '',
+      password: '',
+      phone: member.phone || '',
+      is_loyal: Boolean(member.is_loyal),
       trainer: member.trainer,
       trainer_id: member.trainer_id || '',
       joinDate: member.joinDate,
@@ -96,40 +128,72 @@ function MemberList() {
   };
 
   const handleSave = async () => {
-    if (!formData.name) {
-      setToast({ type: 'error', title: 'Thiếu thông tin', message: 'Vui lòng nhập tên hội viên.' });
+    if (!formData.name || !formData.email || !formData.phone || !formData.joinDate) {
+      setToast({ type: 'error', title: 'Thiếu thông tin', message: 'Vui lòng nhập họ tên, email, số điện thoại và ngày tham gia.' });
       return;
     }
 
-    if (editingMember) {
-      try {
-        await api.put(`/members/${editingMember.id}`, {
-          trainer_id: formData.trainer_id || null
-        });
-      } catch (error) {
-        setToast({
-          type: 'info',
-          title: 'Không đồng bộ được backend',
-          message: normalizeApiError(error, 'Thay đổi hiện chỉ được áp dụng trên giao diện hiện tại.')
-        });
-      }
-
-      setMembers((current) => current.map((member) => (
-        member.id === editingMember.id ? { ...member, ...formData } : member
-      )));
-      setToast({ type: 'success', title: 'Đã cập nhật hội viên', message: 'Thông tin hồ sơ đã được lưu.' });
-    } else {
-      setMembers((current) => [...current, { id: Date.now(), ...formData }]);
-      setToast({ type: 'success', title: 'Đã thêm hội viên', message: 'Hồ sơ hội viên mới đã sẵn sàng.' });
+    if (!editingMember && !formData.password) {
+      setToast({ type: 'error', title: 'Thiếu mật khẩu', message: 'Vui lòng nhập mật khẩu ban đầu cho hội viên mới.' });
+      return;
     }
 
-    setModalOpen(false);
+    setSaving(true);
+
+    try {
+      if (editingMember) {
+        await api.put(`/members/${editingMember.id}`, {
+          full_name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          trainer_id: formData.trainer_id || null,
+          join_date: formData.joinDate,
+          is_loyal: formData.is_loyal
+        });
+
+        setToast({ type: 'success', title: 'Đã cập nhật hội viên', message: 'Thông tin hồ sơ đã được lưu vào backend.' });
+      } else {
+        await api.post('/members', {
+          full_name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          phone: formData.phone,
+          trainer_id: formData.trainer_id || null,
+          join_date: formData.joinDate,
+          is_loyal: formData.is_loyal
+        });
+
+        setToast({ type: 'success', title: 'Đã thêm hội viên', message: 'Hồ sơ hội viên mới đã được lưu vào backend.' });
+      }
+
+      await loadAdminData();
+      setModalOpen(false);
+    } catch (error) {
+      setToast({
+        type: 'error',
+        title: editingMember ? 'Không cập nhật được hội viên' : 'Không thêm được hội viên',
+        message: normalizeApiError(error, 'Backend từ chối thao tác. Vui lòng kiểm tra dữ liệu và thử lại.')
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleDelete = (id) => {
-    setMembers((current) => current.filter((member) => member.id !== id));
-    setToast({ type: 'success', title: 'Đã xóa hội viên', message: 'Bản ghi hiển thị đã được gỡ khỏi bảng quản lý.' });
+  const handleDelete = async (id) => {
+    try {
+      await api.delete(`/members/${id}`);
+      await loadAdminData();
+      setToast({ type: 'success', title: 'Đã xóa hội viên', message: 'Bản ghi đã được xóa khỏi backend.' });
+    } catch (error) {
+      setToast({
+        type: 'error',
+        title: 'Không xóa được hội viên',
+        message: normalizeApiError(error, 'Backend từ chối thao tác xóa.')
+      });
+    }
   };
+
+  const isViewMode = Boolean(viewingMember);
 
   return (
     <section className="page-card">
@@ -164,7 +228,7 @@ function MemberList() {
               <thead>
                 <tr>
                   <th>Hội viên</th>
-                  <th>Gói tập</th>
+	                  <th>Loại hội viên</th>
                   <th>Huấn luyện viên</th>
                   <th>Ngày tham gia</th>
                   <th>Trạng thái</th>
@@ -197,7 +261,7 @@ function MemberList() {
                       <StatusBadge tone={member.status === 'Đang hoạt động' ? 'success' : 'neutral'}>{member.status}</StatusBadge>
                     </td>
                     <td className="table-actions">
-                      <ActionIconButton label="Xem hội viên" onClick={() => openEditModal(member)}>
+                      <ActionIconButton label="Xem hội viên" onClick={() => openViewModal(member)}>
                         <FiEye />
                       </ActionIconButton>
                       <ActionIconButton label="Sửa hội viên" onClick={() => openEditModal(member)}>
@@ -230,67 +294,112 @@ function MemberList() {
 
       <Modal
         open={modalOpen}
-        title={editingMember ? 'Cập nhật hội viên' : 'Thêm hội viên'}
+        title={isViewMode ? 'Chi tiết hội viên' : editingMember ? 'Cập nhật hội viên' : 'Thêm hội viên'}
         onClose={() => setModalOpen(false)}
-        actions={(
+        actions={isViewMode ? (
+          <button type="button" className="ghost-button" onClick={() => setModalOpen(false)}>
+            <FiX />
+            Đóng
+          </button>
+        ) : (
           <>
             <button type="button" className="ghost-button" onClick={() => setModalOpen(false)}>
               <FiX />
               Hủy
             </button>
-            <button type="button" className="primary-button" onClick={handleSave}>
+            <button type="button" className="primary-button" onClick={handleSave} disabled={saving}>
               <FiCheck />
-              Lưu thay đổi
+              {saving ? 'Đang lưu' : 'Lưu thay đổi'}
             </button>
           </>
         )}
       >
-        <div className="form-grid single-column">
-          <label>
-            Họ tên
-            <input value={formData.name} onChange={(event) => setFormData((current) => ({ ...current, name: event.target.value }))} />
-          </label>
-          <label>
-            Gói tập
-            <select value={formData.plan} onChange={(event) => setFormData((current) => ({ ...current, plan: event.target.value }))}>
-              <option>Standard 3 tháng</option>
-              <option>Standard 6 tháng</option>
-              <option>Premium 12 tháng</option>
-            </select>
-          </label>
-          <label>
-            Huấn luyện viên
-            <select
-              value={formData.trainer_id}
-              onChange={(event) => {
-                const selectedTrainer = trainers.find((trainer) => String(trainer.id) === event.target.value);
-                setFormData((current) => ({
-                  ...current,
-                  trainer_id: event.target.value,
-                  trainer: selectedTrainer?.name || 'Chưa phân công'
-                }));
-              }}
-            >
-              <option value="">Chưa phân công</option>
-              {trainers.map((trainer) => (
-                <option key={trainer.id} value={trainer.id}>
-                  {trainer.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Ngày tham gia
-            <input type="date" value={formData.joinDate} onChange={(event) => setFormData((current) => ({ ...current, joinDate: event.target.value }))} />
-          </label>
-          <label>
-            Trạng thái
-            <select value={formData.status} onChange={(event) => setFormData((current) => ({ ...current, status: event.target.value }))}>
-              <option>Đang hoạt động</option>
-              <option>Tạm dừng</option>
-            </select>
-          </label>
-        </div>
+        {isViewMode ? (
+          <div className="readonly-grid">
+            <div>
+              <span>Mã hội viên</span>
+              <strong>{viewingMember.id}</strong>
+            </div>
+            <div>
+              <span>Họ tên</span>
+              <strong>{viewingMember.name}</strong>
+            </div>
+            <div>
+              <span>Email</span>
+              <strong>{viewingMember.email || 'Chưa cập nhật'}</strong>
+            </div>
+            <div>
+              <span>Số điện thoại</span>
+              <strong>{viewingMember.phone || 'Chưa cập nhật'}</strong>
+            </div>
+            <div>
+              <span>Huấn luyện viên</span>
+              <strong>{viewingMember.trainer}</strong>
+            </div>
+            <div>
+              <span>Ngày tham gia</span>
+              <strong>{viewingMember.joinDate}</strong>
+            </div>
+            <div>
+              <span>Loại hội viên</span>
+              <strong>{viewingMember.plan}</strong>
+            </div>
+            <div>
+              <span>Trạng thái</span>
+              <strong>{viewingMember.status}</strong>
+            </div>
+          </div>
+        ) : (
+          <div className="form-grid single-column">
+            <label>
+              Họ tên
+              <input value={formData.name} onChange={(event) => setFormData((current) => ({ ...current, name: event.target.value }))} />
+            </label>
+            <label>
+              Email
+              <input type="email" value={formData.email} onChange={(event) => setFormData((current) => ({ ...current, email: event.target.value }))} />
+            </label>
+            {!editingMember ? (
+              <label>
+                Mật khẩu ban đầu
+                <input type="password" value={formData.password} onChange={(event) => setFormData((current) => ({ ...current, password: event.target.value }))} />
+              </label>
+            ) : null}
+            <label>
+              Số điện thoại
+              <input value={formData.phone} onChange={(event) => setFormData((current) => ({ ...current, phone: event.target.value }))} />
+            </label>
+            <label>
+              Huấn luyện viên
+              <select
+                value={formData.trainer_id}
+                onChange={(event) => {
+                  const selectedTrainer = trainers.find((trainer) => String(trainer.id) === event.target.value);
+                  setFormData((current) => ({
+                    ...current,
+                    trainer_id: event.target.value,
+                    trainer: selectedTrainer?.name || 'Chưa phân công'
+                  }));
+                }}
+              >
+                <option value="">Chưa phân công</option>
+                {trainers.map((trainer) => (
+                  <option key={trainer.id} value={trainer.id}>
+                    {trainer.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Ngày tham gia
+              <input type="date" value={formData.joinDate} onChange={(event) => setFormData((current) => ({ ...current, joinDate: event.target.value }))} />
+            </label>
+            <label className="checkbox-row">
+              <input type="checkbox" checked={formData.is_loyal} onChange={(event) => setFormData((current) => ({ ...current, is_loyal: event.target.checked }))} />
+              Hội viên thân thiết
+            </label>
+          </div>
+        )}
       </Modal>
     </section>
   );

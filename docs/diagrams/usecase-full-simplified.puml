@@ -1,0 +1,117 @@
+@startuml
+title RubyGYM - Full Use Case Diagram
+
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam ArrowColor #374151
+skinparam actor {
+  BorderColor #334155
+  BackgroundColor #F8FAFC
+  FontColor #0F172A
+}
+skinparam rectangle {
+  BorderColor #991B1B
+  BackgroundColor #FFFFFF
+  FontColor #0F172A
+}
+skinparam package {
+  BorderColor #CBD5E1
+  BackgroundColor #F8FAFC
+  FontColor #0F172A
+}
+skinparam usecase {
+  BorderColor #991B1B
+  BackgroundColor #FFFFFF
+  FontColor #111827
+}
+
+actor "Guest" as Guest
+actor "Member" as Member
+actor "Trainer" as Trainer
+actor "Admin" as Admin
+
+rectangle "RubyGYM System" {
+  package "Public and Authentication" {
+    usecase "View Public Gym\nInformation and Events" as UC_PublicInfo
+    usecase "Register Account" as UC_RegisterAccount
+    usecase "Login" as UC_Login
+    usecase "Apply Referral Bonus" as UC_ApplyReferral
+  }
+
+  package "Member Features" {
+    usecase "Set/Update\nTraining Goals" as UC_SetGoals
+    usecase "View Personal Schedule" as UC_ViewPersonalSchedule
+    usecase "Register/Renew\nSubscription Plan" as UC_RegisterRenewSubscription
+    usecase "View Monthly\nEvaluation" as UC_ViewEvaluation
+    usecase "View Trainer\nInformation" as UC_ViewTrainerInfo
+    usecase "View Referral\nInformation" as UC_ViewReferralInfo
+    usecase "Apply Loyalty Bonus" as UC_ApplyLoyalty
+  }
+
+  package "Trainer Features" {
+    usecase "View Assigned Clients" as UC_ViewAssignedClients
+    usecase "View Trainer Schedule" as UC_ViewTrainerSchedule
+    usecase "Create/Update\nTraining Session" as UC_CreateUpdateSession
+    usecase "Validate Schedule Rules" as UC_ValidateScheduleRules
+    usecase "Perform Monthly\nEvaluation" as UC_PerformEvaluation
+  }
+
+  package "Admin Features" {
+    usecase "Manage Members" as UC_ManageMembers
+    usecase "Manage Trainers" as UC_ManageTrainers
+    usecase "Manage Subscriptions" as UC_ManageSubscriptions
+    usecase "Manage Training Sessions" as UC_ManageTrainingSessions
+    usecase "Manage Monthly\nEvaluations" as UC_ManageEvaluations
+    usecase "Manage Events" as UC_ManageEvents
+    usecase "View Reports/Dashboard" as UC_ViewReports
+  }
+}
+
+Guest -- UC_PublicInfo
+Guest -- UC_RegisterAccount
+
+Member -- UC_Login
+Member -- UC_SetGoals
+Member -- UC_ViewPersonalSchedule
+Member -- UC_RegisterRenewSubscription
+Member -- UC_ViewEvaluation
+Member -- UC_ViewTrainerInfo
+Member -- UC_ViewReferralInfo
+
+Trainer -- UC_Login
+Trainer -- UC_ViewAssignedClients
+Trainer -- UC_ViewTrainerSchedule
+Trainer -- UC_CreateUpdateSession
+Trainer -- UC_PerformEvaluation
+
+Admin -- UC_Login
+Admin -- UC_ManageMembers
+Admin -- UC_ManageTrainers
+Admin -- UC_ManageSubscriptions
+Admin -- UC_ManageTrainingSessions
+Admin -- UC_ManageEvaluations
+Admin -- UC_ManageEvents
+Admin -- UC_ViewReports
+Admin -- UC_RegisterRenewSubscription
+Admin -- UC_CreateUpdateSession
+Admin -- UC_PerformEvaluation
+
+UC_ApplyReferral ..> UC_RegisterAccount : <<extend>>
+UC_ApplyLoyalty ..> UC_RegisterRenewSubscription : <<extend>>
+UC_CreateUpdateSession ..> UC_ValidateScheduleRules : <<include>>
+UC_ManageTrainingSessions ..> UC_ValidateScheduleRules : <<include>>
+
+note right of UC_CreateUpdateSession
+Member is not connected here.
+Sessions are created by Trainer or Admin.
+end note
+
+note right of UC_PerformEvaluation
+Evaluation reads the Member's saved training goal.
+Trainer does not set or update Member goals.
+end note
+
+@enduml

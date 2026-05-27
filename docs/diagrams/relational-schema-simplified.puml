@@ -1,0 +1,125 @@
+@startuml
+title RubyGYM - Simplified Relational Schema
+
+left to right direction
+hide circle
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam defaultFontSize 18
+skinparam classFontSize 18
+skinparam classAttributeFontSize 16
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam nodesep 55
+skinparam ranksep 55
+skinparam ArrowColor #374151
+skinparam entity {
+  BorderColor #991B1B
+  BackgroundColor #FFFFFF
+  FontColor #111827
+}
+
+entity "users" as users {
+  * id <<PK>>
+  --
+  email
+  role
+}
+
+entity "trainers" as trainers {
+  * id <<PK>>
+  --
+  user_id <<FK, UNIQUE>>
+  specialization
+  max_daily_hours
+}
+
+entity "members" as members {
+  * id <<PK>>
+  --
+  user_id <<FK, UNIQUE>>
+  trainer_id <<FK>>
+  join_date
+  is_loyal
+  pending_bonus_months
+  referred_by <<FK>>
+}
+
+entity "training_goals" as training_goals {
+  * id <<PK>>
+  --
+  member_id <<FK, UNIQUE>>
+  goal_type
+  target_weight
+  target_bmi
+  target_date
+}
+
+entity "subscriptions" as subscriptions {
+  * id <<PK>>
+  --
+  member_id <<FK>>
+  plan_type
+  start_date
+  end_date
+  is_free_extension
+  status
+}
+
+entity "training_sessions" as training_sessions {
+  * id <<PK>>
+  --
+  trainer_id <<FK>>
+  session_date
+  start_time
+  end_time
+}
+
+entity "session_members" as session_members {
+  * session_id <<PK, FK>>
+  * member_id <<PK, FK>>
+}
+
+entity "monthly_evaluations" as monthly_evaluations {
+  * id <<PK>>
+  --
+  member_id <<FK>>
+  trainer_id <<FK>>
+  month_year
+  target_weight / actual_weight
+  target_bmi / actual_bmi
+}
+
+entity "events" as events {
+  * id <<PK>>
+  --
+  title
+  event_date
+  created_by <<FK>>
+}
+
+' Layout hints keep the high-level ownership flow readable on one slide.
+users -[hidden]down- trainers
+trainers -[hidden]down- training_sessions
+training_sessions -[hidden]right- session_members
+session_members -[hidden]right- members
+members -[hidden]down- subscriptions
+members -[hidden]down- training_goals
+members -[hidden]right- monthly_evaluations
+users -[hidden]right- events
+
+users "1" -- "0..1" trainers
+users "1" -- "0..1" members
+trainers "1" -- "0..*" members
+members "0..1" -- "0..*" members
+members "1" -- "0..1" training_goals
+members "1" -- "0..*" subscriptions
+trainers "1" -- "0..*" training_sessions
+training_sessions "1" -- "0..*" session_members
+members "1" -- "0..*" session_members
+members "1" -- "0..*" monthly_evaluations
+trainers "1" -- "0..*" monthly_evaluations
+users "1" -- "0..*" events
+
+@enduml

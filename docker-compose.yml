@@ -1,35 +1,45 @@
 services:
   db:
     image: mysql:8.0
+    container_name: rubygym-db
     environment:
       MYSQL_ROOT_PASSWORD: rubygym123
       MYSQL_DATABASE: rubygym
     ports:
       - "3306:3306"
     volumes:
-      - ./docker:/docker-entrypoint-initdb.d
-      - mysql_data:/var/lib/mysql
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./docker/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prubygym123"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   backend:
     build: ./backend
-    ports:
-      - "3000:3000"
+    container_name: rubygym-backend
     environment:
       DB_HOST: db
       DB_PORT: 3306
       DB_USER: root
       DB_PASSWORD: rubygym123
       DB_NAME: rubygym
-      JWT_SECRET: rubygym-dev-secret-key
+      JWT_SECRET: rubygym-demo-secret
+      PORT: 3000
+    ports:
+      - "3000:3000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        REACT_APP_API_URL: http://localhost:3000/api
+    container_name: rubygym-frontend
     ports:
-      - "80:80"
+      - "8080:80"
     depends_on:
       - backend
-
-volumes:
-  mysql_data:

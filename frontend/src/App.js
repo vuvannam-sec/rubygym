@@ -18,6 +18,7 @@ import LandingPage from './components/Landing/LandingPage';
 import MemberList from './components/Members/MemberList';
 import MyMembersPage from './components/Members/MyMembersPage';
 import ReferralPage from './components/Members/ReferralPage';
+import TrainingGoals from './components/Members/TrainingGoals';
 import ScheduleView from './components/Schedule/ScheduleView';
 import PlanSelector from './components/Subscriptions/PlanSelector';
 import SubscriptionStatus from './components/Subscriptions/SubscriptionStatus';
@@ -135,6 +136,7 @@ function App() {
           <Route element={<DashboardLayout />}>
             <Route path="/member" element={<MemberDashboard />} />
             <Route path="/member/schedule" element={<ScheduleView variant="member" />} />
+            <Route path="/member/goals" element={<TrainingGoals />} />
             <Route path="/member/results" element={<EvaluationList />} />
             <Route path="/member/subscriptions" element={<PlanSelector />} />
             <Route path="/member/referrals" element={<ReferralPage />} />

@@ -1,5 +1,8 @@
-CREATE DATABASE IF NOT EXISTS rubygym;
+CREATE DATABASE IF NOT EXISTS rubygym
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_0900_ai_ci;
 USE rubygym;
+SET NAMES utf8mb4 COLLATE utf8mb4_0900_ai_ci;
 
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -13,7 +16,7 @@ CREATE TABLE users (
 
 CREATE TABLE trainers (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
+    user_id INT NOT NULL UNIQUE,
     specialization VARCHAR(255),
     max_daily_hours INT DEFAULT 8,
     FOREIGN KEY (user_id) REFERENCES users(id)
@@ -21,14 +24,27 @@ CREATE TABLE trainers (
 
 CREATE TABLE members (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
+    user_id INT NOT NULL UNIQUE,
     trainer_id INT,
     join_date DATE NOT NULL,
     is_loyal BOOLEAN DEFAULT FALSE,
+    pending_bonus_months INT DEFAULT 0,
     referred_by INT,
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (trainer_id) REFERENCES trainers(id),
     FOREIGN KEY (referred_by) REFERENCES members(id)
+);
+
+CREATE TABLE training_goals (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    member_id INT NOT NULL UNIQUE,
+    goal_type VARCHAR(100) NOT NULL DEFAULT 'General fitness',
+    target_weight DECIMAL(5,2),
+    target_bmi DECIMAL(4,2),
+    target_date DATE,
+    notes TEXT,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (member_id) REFERENCES members(id)
 );
 
 CREATE TABLE subscriptions (

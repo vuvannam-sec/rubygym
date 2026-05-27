@@ -97,6 +97,11 @@ export function getAvatarPlaceholderColor(id) {
   return AVATAR_PLACEHOLDER_COLORS[numericId % AVATAR_PLACEHOLDER_COLORS.length];
 }
 
+export function getAvatarPlaceholderClass(id) {
+  const numericId = getNumericId(id);
+  return `avatar-color-${numericId % AVATAR_PLACEHOLDER_COLORS.length}`;
+}
+
 export function getTrainerImage(trainer = {}) {
   if (trainer.image_url) {
     return trainer.image_url;

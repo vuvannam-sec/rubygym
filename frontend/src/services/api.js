@@ -8,9 +8,13 @@ api.interceptors.request.use((config) => {
   const rawAuth = localStorage.getItem('rubygym_auth');
 
   if (rawAuth) {
-    const { token } = JSON.parse(rawAuth);
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    try {
+      const { token } = JSON.parse(rawAuth);
+      if (token && !String(token).startsWith('demo-token-')) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (error) {
+      localStorage.removeItem('rubygym_auth');
     }
   }
 

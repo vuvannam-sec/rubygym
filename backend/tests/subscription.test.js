@@ -93,6 +93,28 @@ describe('Subscription Routes', () => {
     expect(res.body.end_date).toBe('2027-04-01');
   });
 
+  test('POST /api/subscriptions should give loyal bonus only for annual renewal', async () => {
+    const token = createToken({ id: 1, role: 'ADMIN', email: 'admin@rubygym.com' });
+
+    pool.execute
+      .mockResolvedValueOnce([[{ id: 5, join_date: '2024-01-01', is_loyal: 1 }]])
+      .mockResolvedValueOnce([[{ id: 1 }]])
+      .mockResolvedValueOnce([{ insertId: 11 }]);
+
+    const res = await request(app)
+      .post('/api/subscriptions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        member_id: 5,
+        plan_type: 'SEMI_ANNUAL',
+        start_date: '2026-04-01'
+      });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.free_extension_months).toBe(0);
+    expect(res.body.end_date).toBe('2026-10-01');
+  });
+
   test('POST /api/subscriptions should reject member creating subscription for another member', async () => {
     const token = createToken({ id: 25, role: 'MEMBER', email: 'member@rubygym.com' });
     pool.execute.mockResolvedValueOnce([[{ id: 5 }]]);

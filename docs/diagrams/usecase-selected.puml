@@ -1,0 +1,65 @@
+@startuml
+title RubyGYM - Selected Use Cases
+
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam ArrowColor #374151
+skinparam actor {
+  BorderColor #334155
+  BackgroundColor #F8FAFC
+  FontColor #111827
+}
+skinparam rectangle {
+  BorderColor #991B1B
+  BackgroundColor #FFFFFF
+  FontColor #111827
+}
+skinparam usecase {
+  BorderColor #991B1B
+  BackgroundColor #FFFFFF
+  FontColor #111827
+}
+skinparam note {
+  BorderColor #B45309
+  BackgroundColor #FFFBEB
+  FontColor #111827
+}
+
+actor "Admin" as Admin
+actor "Trainer" as Trainer
+actor "Member" as Member
+
+rectangle "RubyGYM System" {
+  usecase "UC01 Manage Members" as UC01
+  usecase "UC02 Register/Renew Subscription Plan" as UC02
+  usecase "UC03 Create Training Session" as UC03
+  usecase "UC04 View Personal Schedule" as UC04
+  usecase "UC05 Perform Monthly Evaluation" as UC05
+}
+
+Admin -- UC01
+Member -- UC02
+Admin -- UC02
+Trainer -- UC03
+Admin -- UC03
+Member -- UC04
+Trainer -- UC05
+Admin -- UC05
+
+note right of UC03
+Member is not an actor for this use case.
+Trainer creates sessions for assigned members.
+Admin can create sessions through the API.
+end note
+
+note right of UC05
+Trainer or Admin can perform the evaluation.
+Member only views evaluation results.
+Evaluation reads Member's saved training goal
+when target values are available.
+end note
+
+@enduml

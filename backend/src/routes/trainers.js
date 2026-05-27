@@ -60,8 +60,11 @@ router.get('/:id/clients', authenticate, async (req, res) => {
     }
 
     const [rows] = await pool.execute(`
-      SELECT m.id, u.full_name, u.email, u.phone, m.join_date, m.is_loyal
-      FROM members m JOIN users u ON m.user_id = u.id
+      SELECT m.id, u.full_name, u.email, u.phone, m.join_date, m.is_loyal,
+             tg.goal_type, tg.target_weight, tg.target_bmi, tg.target_date, tg.notes AS goal_notes
+      FROM members m
+      JOIN users u ON m.user_id = u.id
+      LEFT JOIN training_goals tg ON tg.member_id = m.id
       WHERE m.trainer_id = ?
       ORDER BY u.full_name
     `, [req.params.id]);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FiCheck, FiSave } from 'react-icons/fi';
 import { trainerEvaluationRows, trainerMembers } from '../../data/mockData';
 import { useAuth } from '../../context/AuthContext';
@@ -31,13 +31,21 @@ function EvaluationForm() {
         ]);
 
         if (memberResponse.data.length > 0) {
-          setMembers(memberResponse.data.map((member) => ({
+          const mappedMembers = memberResponse.data.map((member) => ({
             id: member.id,
-            name: member.full_name
-          })));
+            name: member.full_name,
+            goal_type: member.goal_type,
+            target_weight: member.target_weight,
+            target_bmi: member.target_bmi,
+            target_date: member.target_date,
+            goal_notes: member.goal_notes
+          }));
+          setMembers(mappedMembers);
           setFormData((current) => ({
             ...current,
-            member_id: String(memberResponse.data[0].id)
+            member_id: String(mappedMembers[0].id),
+            target_weight: mappedMembers[0].target_weight || current.target_weight,
+            target_bmi: mappedMembers[0].target_bmi || current.target_bmi
           }));
         }
 
@@ -61,8 +69,24 @@ function EvaluationForm() {
 
   const handleChange = (event) => {
     const { name, value } = event.target;
-    setFormData((current) => ({ ...current, [name]: value }));
+    setFormData((current) => {
+      if (name !== 'member_id') {
+        return { ...current, [name]: value };
+      }
+
+      const selectedMember = members.find((member) => String(member.id) === value);
+      return {
+        ...current,
+        member_id: value,
+        target_weight: selectedMember?.target_weight || '',
+        target_bmi: selectedMember?.target_bmi || ''
+      };
+    });
   };
+
+  const selectedGoal = useMemo(() => (
+    members.find((member) => String(member.id) === formData.member_id)
+  ), [members, formData.member_id]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -120,6 +144,31 @@ function EvaluationForm() {
         title="Cập nhật đánh giá học viên"
         subtitle="Nhập cân nặng, BMI và ghi chú chuyên môn cho từng học viên theo tháng."
       />
+      {selectedGoal?.goal_type ? (
+        <article className="dashboard-panel compact-panel">
+          <div className="panel-heading">
+            <div>
+              <h3>Mục tiêu hiện tại của học viên</h3>
+              <p>{selectedGoal.goal_type}</p>
+            </div>
+          </div>
+          <div className="plan-summary">
+            <div>
+              <strong>{selectedGoal.target_weight || 'Chưa đặt'}</strong>
+              <p>Cân nặng mục tiêu</p>
+            </div>
+            <div>
+              <strong>{selectedGoal.target_bmi || 'Chưa đặt'}</strong>
+              <p>BMI mục tiêu</p>
+            </div>
+            <div>
+              <strong>{selectedGoal.target_date ? String(selectedGoal.target_date).slice(0, 10) : 'Không giới hạn'}</strong>
+              <p>Ngày mục tiêu</p>
+            </div>
+          </div>
+          {selectedGoal.goal_notes ? <p>{selectedGoal.goal_notes}</p> : null}
+        </article>
+      ) : null}
       <form className="form-grid" onSubmit={handleSubmit}>
         <label>
           Học viên

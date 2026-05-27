@@ -2,39 +2,52 @@
 -- Password placeholder hashes are kept in bcrypt format for demo accounts.
 
 USE rubygym;
+SET NAMES utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+
+SET @admin_hash = '$2b$10$.og1SQ6yMEYAW3/OYJ0ReOaiz5gKgeTVP7x2tRG/MLdiKhKM26Dsy';
+SET @trainer_hash = '$2b$10$Dz7v8rz1O.mmOqLc1/url.FZG02D6Or97BDHZjjDghHU3U2sNvnU.';
+SET @member_hash = '$2b$10$hNghjyJmkjE3qu4NWjG71ucgDglLoYkWu05waFBKWYm/TTWh6arsi';
 
 INSERT INTO users (id, email, password_hash, full_name, phone, role) VALUES
-(1, 'admin@rubygym.com', '$2a$10$BeXTgXajEU/mNjQiXxk0lOPv4VgZ3L02hjzjcDJMcCWRP0lrGrRBi', 'Nguyen Van Admin', '0901000001', 'ADMIN'),
-(2, 'trainer.linh@rubygym.com', '$2a$10$BeXTgXajEU/mNjQiXxk0lOPv4VgZ3L02hjzjcDJMcCWRP0lrGrRBi', 'Tran Thu Linh', '0901000002', 'TRAINER'),
-(3, 'trainer.khanh@rubygym.com', '$2a$10$BeXTgXajEU/mNjQiXxk0lOPv4VgZ3L02hjzjcDJMcCWRP0lrGrRBi', 'Pham Minh Khanh', '0901000003', 'TRAINER'),
-(4, 'trainer.huy@rubygym.com', '$2a$10$BeXTgXajEU/mNjQiXxk0lOPv4VgZ3L02hjzjcDJMcCWRP0lrGrRBi', 'Le Quang Huy', '0901000004', 'TRAINER'),
-(5, 'member.an@rubygym.com', '$2a$10$BeXTgXajEU/mNjQiXxk0lOPv4VgZ3L02hjzjcDJMcCWRP0lrGrRBi', 'Nguyen Hoang An', '0901000011', 'MEMBER'),
-(6, 'member.binh@rubygym.com', '$2a$10$BeXTgXajEU/mNjQiXxk0lOPv4VgZ3L02hjzjcDJMcCWRP0lrGrRBi', 'Tran Ngoc Binh', '0901000012', 'MEMBER'),
-(7, 'member.chau@rubygym.com', '$2a$10$BeXTgXajEU/mNjQiXxk0lOPv4VgZ3L02hjzjcDJMcCWRP0lrGrRBi', 'Le Minh Chau', '0901000013', 'MEMBER'),
-(8, 'member.duong@rubygym.com', '$2a$10$BeXTgXajEU/mNjQiXxk0lOPv4VgZ3L02hjzjcDJMcCWRP0lrGrRBi', 'Pham Thu Duong', '0901000014', 'MEMBER'),
-(9, 'member.giang@rubygym.com', '$2a$10$BeXTgXajEU/mNjQiXxk0lOPv4VgZ3L02hjzjcDJMcCWRP0lrGrRBi', 'Do Ha Giang', '0901000015', 'MEMBER'),
-(10, 'member.ha@rubygym.com', '$2a$10$BeXTgXajEU/mNjQiXxk0lOPv4VgZ3L02hjzjcDJMcCWRP0lrGrRBi', 'Vu Bao Ha', '0901000016', 'MEMBER'),
-(11, 'member.khoi@rubygym.com', '$2a$10$BeXTgXajEU/mNjQiXxk0lOPv4VgZ3L02hjzjcDJMcCWRP0lrGrRBi', 'Bui Dang Khoi', '0901000017', 'MEMBER'),
-(12, 'member.lan@rubygym.com', '$2a$10$BeXTgXajEU/mNjQiXxk0lOPv4VgZ3L02hjzjcDJMcCWRP0lrGrRBi', 'Dang Thu Lan', '0901000018', 'MEMBER'),
-(13, 'member.minh@rubygym.com', '$2a$10$BeXTgXajEU/mNjQiXxk0lOPv4VgZ3L02hjzjcDJMcCWRP0lrGrRBi', 'Nguyen Quoc Minh', '0901000019', 'MEMBER'),
-(14, 'member.phuong@rubygym.com', '$2a$10$BeXTgXajEU/mNjQiXxk0lOPv4VgZ3L02hjzjcDJMcCWRP0lrGrRBi', 'Hoang Minh Phuong', '0901000020', 'MEMBER');
+(1, 'admin@rubygym.com', @admin_hash, 'Nguyen Van Admin', '0901000001', 'ADMIN'),
+(2, 'trainer.linh@rubygym.com', @trainer_hash, 'Tran Thu Linh', '0901000002', 'TRAINER'),
+(3, 'trainer.khanh@rubygym.com', @trainer_hash, 'Pham Minh Khanh', '0901000003', 'TRAINER'),
+(4, 'trainer.huy@rubygym.com', @trainer_hash, 'Le Quang Huy', '0901000004', 'TRAINER'),
+(5, 'member.an@rubygym.com', @member_hash, 'Nguyen Hoang An', '0901000011', 'MEMBER'),
+(6, 'member.binh@rubygym.com', @member_hash, 'Tran Ngoc Binh', '0901000012', 'MEMBER'),
+(7, 'member.chau@rubygym.com', @member_hash, 'Le Minh Chau', '0901000013', 'MEMBER'),
+(8, 'member.duong@rubygym.com', @member_hash, 'Pham Thu Duong', '0901000014', 'MEMBER'),
+(9, 'member.giang@rubygym.com', @member_hash, 'Do Ha Giang', '0901000015', 'MEMBER'),
+(10, 'member.ha@rubygym.com', @member_hash, 'Vu Bao Ha', '0901000016', 'MEMBER'),
+(11, 'member.khoi@rubygym.com', @member_hash, 'Bui Dang Khoi', '0901000017', 'MEMBER'),
+(12, 'member.lan@rubygym.com', @member_hash, 'Dang Thu Lan', '0901000018', 'MEMBER'),
+(13, 'member.minh@rubygym.com', @member_hash, 'Nguyen Quoc Minh', '0901000019', 'MEMBER'),
+(14, 'member.phuong@rubygym.com', @member_hash, 'Hoang Minh Phuong', '0901000020', 'MEMBER');
 
 INSERT INTO trainers (id, user_id, specialization, max_daily_hours) VALUES
 (1, 2, 'Strength Training', 8),
 (2, 3, 'Weight Loss Coaching', 8),
 (3, 4, 'Yoga and Mobility', 8);
 
-INSERT INTO members (id, user_id, trainer_id, join_date, is_loyal, referred_by) VALUES
-(1, 5, 1, '2024-01-10', 1, NULL),
-(2, 6, 1, '2024-06-02', 0, 1),
-(3, 7, 1, '2025-01-20', 0, NULL),
-(4, 8, 2, '2023-03-15', 1, NULL),
-(5, 9, 2, '2024-07-05', 0, 4),
-(6, 10, 2, '2025-02-11', 0, NULL),
-(7, 11, 3, '2024-04-01', 1, NULL),
-(8, 12, 3, '2024-09-12', 0, 7),
-(9, 13, 3, '2025-01-08', 0, NULL),
-(10, 14, 1, '2025-03-10', 0, 2);
+INSERT INTO members (id, user_id, trainer_id, join_date, is_loyal, pending_bonus_months, referred_by) VALUES
+(1, 5, 1, '2024-01-10', 1, 0, NULL),
+(2, 6, 1, '2024-06-02', 0, 0, 1),
+(3, 7, 1, '2025-01-20', 0, 0, NULL),
+(4, 8, 2, '2023-03-15', 1, 0, NULL),
+(5, 9, 2, '2024-07-05', 0, 1, 4),
+(6, 10, 2, '2025-02-11', 0, 0, NULL),
+(7, 11, 3, '2024-04-01', 1, 0, NULL),
+(8, 12, 3, '2024-09-12', 0, 0, 7),
+(9, 13, 3, '2025-01-08', 0, 0, NULL),
+(10, 14, 1, '2025-03-10', 0, 0, 2);
+
+INSERT INTO training_goals (id, member_id, goal_type, target_weight, target_bmi, target_date, notes) VALUES
+(1, 1, 'Strength maintenance', 68.00, 22.50, '2026-06-30', 'Duy tri suc manh than duoi va 2 buoi cardio moi tuan.'),
+(2, 2, 'Fat loss', 62.00, 21.80, '2026-07-31', 'Giam mo cham, giu lich tap sang deu dan.'),
+(3, 3, 'Muscle gain', 73.00, 23.20, '2026-08-31', 'Tang khoi co nac va cai thien ky thuat squat.'),
+(4, 4, 'Weight control', 56.00, 20.80, '2026-06-30', 'Kiem soat can nang va giu nhat ky tap luyen.'),
+(5, 5, 'Fat loss', 58.00, 21.00, '2026-07-15', 'Tang cuong dinh duong va duy tri 3 buoi moi tuan.'),
+(6, 8, 'Mobility', 50.00, 19.50, '2026-06-15', 'Cai thien do deo dai va thang bang.');
 
 INSERT INTO subscriptions (id, member_id, plan_type, start_date, end_date, is_free_extension, status) VALUES
 (1, 1, 'ANNUAL', '2025-01-10', '2026-04-10', 1, 'ACTIVE'),

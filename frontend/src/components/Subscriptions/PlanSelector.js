@@ -60,7 +60,7 @@ function PlanSelector() {
       setToast({
         type: 'success',
         title: 'Đã lưu gói tập',
-        message: `Hạn mới của bạn là ${data.end_date}. Thời gian miễn phí được cộng thêm: ${data.free_extension_months} tháng.`
+        message: `Hạn mới của bạn là ${data.end_date}. Loyal: ${data.free_extension_months} tháng, giới thiệu: ${data.referral_bonus_months || 0} tháng.`
       });
       setSubscriptions((current) => [{
         id: data.subscriptionId,
@@ -110,7 +110,7 @@ function PlanSelector() {
               <p>Ngày hết hạn</p>
             </div>
             <div>
-              <strong>{isLoyal ? '+3 tháng khi gia hạn' : memberPlan.sessionsLeft}</strong>
+              <strong>{isLoyal ? '+3 tháng khi gia hạn 1 năm' : memberPlan.sessionsLeft}</strong>
               <p>{isLoyal ? 'Ưu đãi loyal hiện có' : 'Buổi còn lại'}</p>
             </div>
           </div>

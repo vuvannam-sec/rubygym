@@ -1,11 +1,49 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FiBell, FiCheck, FiEdit, FiEye, FiPlus, FiTrash2, FiX } from 'react-icons/fi';
 import { events as initialEvents } from '../../data/mockData';
 import api from '../../services/api';
 import { normalizeApiError } from '../../services/fallbacks';
+import { getRotatedEventImage } from '../../services/imageUtils';
 import MediaAsset from '../Layout/MediaAsset';
 import { ActionIconButton, EmptyState, Modal, Pagination, SearchField, SectionHeader, StatusBadge, Toast } from '../Layout/ProductUI';
-import { getRotatedEventImage } from '../../services/imageUtils';
+
+const defaultForm = {
+  title: '',
+  date: '2026-04-20T08:00',
+  attendees: 0,
+  status: 'Đang mở đăng ký',
+  image_url: ''
+};
+
+const normalizeDateTimeInput = (value) => {
+  if (!value) {
+    return '';
+  }
+
+  return String(value).replace(' ', 'T').slice(0, 16);
+};
+
+const displayDateTime = (value) => normalizeDateTimeInput(value).replace('T', ' ');
+
+const buildDescription = (status, attendees) => `${status} - ${Number(attendees || 0)} người quan tâm`;
+
+const parseDescription = (description) => {
+  const fallback = { status: 'Đang mở đăng ký', attendees: 0 };
+
+  if (!description) {
+    return fallback;
+  }
+
+  const match = String(description).match(/^(.*?)\s+-\s+(\d+)\s+người quan tâm$/);
+  if (!match) {
+    return fallback;
+  }
+
+  return {
+    status: match[1],
+    attendees: Number(match[2])
+  };
+};
 
 function EventList() {
   const [events, setEvents] = useState(initialEvents);
@@ -13,37 +51,46 @@ function EventList() {
   const [page, setPage] = useState(1);
   const [toast, setToast] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [viewingEvent, setViewingEvent] = useState(null);
   const [editingEvent, setEditingEvent] = useState(null);
-  const [formData, setFormData] = useState({
-    title: '',
-    date: '2026-04-20 08:00',
-    attendees: 0,
-    status: 'Đang mở đăng ký',
-    image_url: ''
-  });
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState(defaultForm);
   const pageSize = 4;
 
+  const mapEvent = useCallback((eventItem) => {
+    const parsed = parseDescription(eventItem.description);
+
+    return {
+      id: eventItem.id,
+      title: eventItem.title,
+      date: normalizeDateTimeInput(eventItem.event_date || eventItem.date),
+      attendees: parsed.attendees || eventItem.attendees || 0,
+      status: parsed.status || eventItem.status || 'Đang mở đăng ký',
+      image_url: eventItem.image_url || '',
+      created_by_name: eventItem.created_by_name || ''
+    };
+  }, []);
+
+  const loadEvents = useCallback(async () => {
+    const { data } = await api.get('/events');
+    setEvents(data.map(mapEvent));
+  }, [mapEvent]);
+
   useEffect(() => {
-    const loadEvents = async () => {
+    const loadInitialData = async () => {
       try {
-        const { data } = await api.get('/events');
-        if (data.length > 0) {
-          setEvents(data.map((eventItem) => ({
-            id: eventItem.id,
-            title: eventItem.title,
-            date: String(eventItem.event_date).replace('T', ' ').slice(0, 16),
-            attendees: 0,
-            status: 'Đang mở đăng ký',
-            image_url: eventItem.image_url || ''
-          })));
-        }
+        await loadEvents();
       } catch (error) {
-        // Keep fallback data.
+        setToast({
+          type: 'info',
+          title: 'Đang hiển thị dữ liệu mẫu',
+          message: normalizeApiError(error, 'Không tải được danh sách sự kiện từ backend.')
+        });
       }
     };
 
-    loadEvents();
-  }, []);
+    loadInitialData();
+  }, [loadEvents]);
 
   const filteredEvents = useMemo(() => events.filter((eventItem) => (
     eventItem.title.toLowerCase().includes(query.toLowerCase())
@@ -54,18 +101,20 @@ function EventList() {
   const pagedEvents = filteredEvents.slice((page - 1) * pageSize, page * pageSize);
 
   const openCreateModal = () => {
+    setViewingEvent(null);
     setEditingEvent(null);
-    setFormData({
-      title: '',
-      date: '2026-04-20 08:00',
-      attendees: 0,
-      status: 'Đang mở đăng ký',
-      image_url: ''
-    });
+    setFormData(defaultForm);
+    setModalOpen(true);
+  };
+
+  const openViewModal = (eventItem) => {
+    setViewingEvent(eventItem);
+    setEditingEvent(null);
     setModalOpen(true);
   };
 
   const openEditModal = (eventItem) => {
+    setViewingEvent(null);
     setEditingEvent(eventItem);
     setFormData({
       title: eventItem.title,
@@ -78,58 +127,57 @@ function EventList() {
   };
 
   const handleSave = async () => {
-    if (!formData.title) {
-      setToast({ type: 'error', title: 'Thiếu tiêu đề sự kiện', message: 'Vui lòng nhập tên sự kiện trước khi lưu.' });
+    if (!formData.title || !formData.date) {
+      setToast({ type: 'error', title: 'Thiếu thông tin', message: 'Vui lòng nhập tên sự kiện và thời gian.' });
       return;
     }
 
+    const payload = {
+      title: formData.title,
+      description: buildDescription(formData.status, formData.attendees),
+      event_date: formData.date.replace('T', ' '),
+      image_url: formData.image_url
+    };
+
+    setSaving(true);
+
     try {
       if (editingEvent) {
-        await api.put(`/events/${editingEvent.id}`, {
-          title: formData.title,
-          description: `${formData.status} - ${formData.attendees} người quan tâm`,
-          event_date: formData.date,
-          image_url: formData.image_url
-        });
-        setEvents((current) => current.map((eventItem) => (
-          eventItem.id === editingEvent.id ? { ...eventItem, ...formData } : eventItem
-        )));
-        setToast({ type: 'success', title: 'Đã cập nhật sự kiện', message: 'Thông tin sự kiện đã được cập nhật.' });
+        await api.put(`/events/${editingEvent.id}`, payload);
+        setToast({ type: 'success', title: 'Đã cập nhật sự kiện', message: 'Thông tin sự kiện đã được lưu vào backend.' });
       } else {
-        const { data } = await api.post('/events', {
-          title: formData.title,
-          description: `${formData.status} - ${formData.attendees} người quan tâm`,
-          event_date: formData.date,
-          image_url: formData.image_url
-        });
-        setEvents((current) => [...current, { id: data.eventId, ...formData }]);
-        setToast({ type: 'success', title: 'Đã tạo sự kiện', message: 'Sự kiện mới đã được thêm vào lịch marketing.' });
+        await api.post('/events', payload);
+        setToast({ type: 'success', title: 'Đã tạo sự kiện', message: 'Sự kiện mới đã được lưu vào backend.' });
       }
+
+      await loadEvents();
+      setModalOpen(false);
     } catch (error) {
-      if (editingEvent) {
-        setEvents((current) => current.map((eventItem) => (
-          eventItem.id === editingEvent.id ? { ...eventItem, ...formData } : eventItem
-        )));
-      } else {
-        setEvents((current) => [...current, { id: `EV-${Date.now()}`, ...formData }]);
-      }
-
-      setToast({ type: 'info', title: 'Đang dùng dữ liệu cục bộ', message: normalizeApiError(error, 'Backend chưa sẵn sàng, sự kiện được lưu tạm trên giao diện.') });
+      setToast({
+        type: 'error',
+        title: editingEvent ? 'Không cập nhật được sự kiện' : 'Không tạo được sự kiện',
+        message: normalizeApiError(error, 'Backend từ chối thao tác. Vui lòng kiểm tra dữ liệu và thử lại.')
+      });
+    } finally {
+      setSaving(false);
     }
-
-    setModalOpen(false);
   };
 
   const handleDelete = async (id) => {
     try {
       await api.delete(`/events/${id}`);
-      setToast({ type: 'success', title: 'Đã xóa sự kiện', message: 'Sự kiện đã được gỡ khỏi danh sách.' });
+      await loadEvents();
+      setToast({ type: 'success', title: 'Đã xóa sự kiện', message: 'Sự kiện đã được xóa khỏi backend.' });
     } catch (error) {
-      setToast({ type: 'info', title: 'Đang dùng dữ liệu cục bộ', message: normalizeApiError(error, 'Backend chưa sẵn sàng, sự kiện chỉ được xóa trên giao diện hiện tại.') });
+      setToast({
+        type: 'error',
+        title: 'Không xóa được sự kiện',
+        message: normalizeApiError(error, 'Backend từ chối thao tác xóa.')
+      });
     }
-
-    setEvents((current) => current.filter((eventItem) => eventItem.id !== id));
   };
+
+  const isViewMode = Boolean(viewingEvent);
 
   return (
     <section className="page-card">
@@ -137,7 +185,7 @@ function EventList() {
       <SectionHeader
         eyebrow="Admin / Sự kiện"
         title="Quản lý sự kiện & chiến dịch"
-        subtitle="Lên lịch workshop, bootcamp và các hoạt động cộng đồng giúp tăng mức độ gắn kết hội viên."
+        subtitle="Lên lịch workshop, bootcamp và các hoạt động cộng đồng bằng dữ liệu backend."
         actions={(
           <button type="button" className="primary-button" onClick={openCreateModal}>
             <FiPlus />
@@ -190,7 +238,7 @@ function EventList() {
                         </div>
                       </div>
                     </td>
-                    <td>{eventItem.date}</td>
+                    <td>{displayDateTime(eventItem.date)}</td>
                     <td>{eventItem.attendees}</td>
                     <td>
                       <StatusBadge
@@ -200,7 +248,7 @@ function EventList() {
                       </StatusBadge>
                     </td>
                     <td className="table-actions">
-                      <ActionIconButton label="Xem sự kiện" onClick={() => openEditModal(eventItem)}>
+                      <ActionIconButton label="Xem sự kiện" onClick={() => openViewModal(eventItem)}>
                         <FiEye />
                       </ActionIconButton>
                       <ActionIconButton label="Sửa sự kiện" onClick={() => openEditModal(eventItem)}>
@@ -233,51 +281,68 @@ function EventList() {
 
       <Modal
         open={modalOpen}
-        title={editingEvent ? 'Cập nhật sự kiện' : 'Tạo sự kiện'}
+        title={isViewMode ? 'Chi tiết sự kiện' : editingEvent ? 'Cập nhật sự kiện' : 'Tạo sự kiện'}
         onClose={() => setModalOpen(false)}
-        actions={(
+        actions={isViewMode ? (
+          <button type="button" className="ghost-button" onClick={() => setModalOpen(false)}>
+            <FiX />
+            Đóng
+          </button>
+        ) : (
           <>
             <button type="button" className="ghost-button" onClick={() => setModalOpen(false)}>
               <FiX />
               Hủy
             </button>
-            <button type="button" className="primary-button" onClick={handleSave}>
+            <button type="button" className="primary-button" onClick={handleSave} disabled={saving}>
               <FiCheck />
-              Lưu thay đổi
+              {saving ? 'Đang lưu' : 'Lưu thay đổi'}
             </button>
           </>
         )}
       >
-        <div className="form-grid single-column">
-          <label>
-            Tên sự kiện
-            <input value={formData.title} onChange={(event) => setFormData((current) => ({ ...current, title: event.target.value }))} />
-          </label>
-          <label>
-            Thời gian
-            <input value={formData.date} onChange={(event) => setFormData((current) => ({ ...current, date: event.target.value }))} />
-          </label>
-          <label>
-            Ảnh sự kiện
-            <input value={formData.image_url} onChange={(event) => setFormData((current) => ({ ...current, image_url: event.target.value }))} />
-          </label>
-          <label>
-            Số người tham gia
-            <input
-              type="number"
-              value={formData.attendees}
-              onChange={(event) => setFormData((current) => ({ ...current, attendees: Number(event.target.value) }))}
-            />
-          </label>
-          <label>
-            Trạng thái
-            <select value={formData.status} onChange={(event) => setFormData((current) => ({ ...current, status: event.target.value }))}>
-              <option>Đang mở đăng ký</option>
-              <option>Đã đầy</option>
-              <option>Sắp diễn ra</option>
-            </select>
-          </label>
-        </div>
+        {isViewMode ? (
+          <div className="readonly-grid">
+            <div><span>Mã sự kiện</span><strong>{viewingEvent.id}</strong></div>
+            <div><span>Tên sự kiện</span><strong>{viewingEvent.title}</strong></div>
+            <div><span>Thời gian</span><strong>{displayDateTime(viewingEvent.date)}</strong></div>
+            <div><span>Người tham gia</span><strong>{viewingEvent.attendees}</strong></div>
+            <div><span>Trạng thái</span><strong>{viewingEvent.status}</strong></div>
+            <div><span>Ảnh sự kiện</span><strong>{viewingEvent.image_url || 'Dùng ảnh mặc định'}</strong></div>
+          </div>
+        ) : (
+          <div className="form-grid single-column">
+            <label>
+              Tên sự kiện
+              <input value={formData.title} onChange={(event) => setFormData((current) => ({ ...current, title: event.target.value }))} />
+            </label>
+            <label>
+              Thời gian
+              <input type="datetime-local" value={formData.date} onChange={(event) => setFormData((current) => ({ ...current, date: event.target.value }))} />
+            </label>
+            <label>
+              Ảnh sự kiện
+              <input value={formData.image_url} onChange={(event) => setFormData((current) => ({ ...current, image_url: event.target.value }))} />
+            </label>
+            <label>
+              Số người tham gia
+              <input
+                type="number"
+                min="0"
+                value={formData.attendees}
+                onChange={(event) => setFormData((current) => ({ ...current, attendees: Number(event.target.value) }))}
+              />
+            </label>
+            <label>
+              Trạng thái
+              <select value={formData.status} onChange={(event) => setFormData((current) => ({ ...current, status: event.target.value }))}>
+                <option>Đang mở đăng ký</option>
+                <option>Đã đầy</option>
+                <option>Sắp diễn ra</option>
+              </select>
+            </label>
+          </div>
+        )}
       </Modal>
     </section>
   );

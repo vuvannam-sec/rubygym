@@ -1,0 +1,127 @@
+@startuml
+title RubyGYM - Relational Schema
+
+left to right direction
+hide circle
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam classAttributeIconSize 0
+skinparam ArrowColor #374151
+skinparam entity {
+  BorderColor #991B1B
+  BackgroundColor #FFFFFF
+  FontColor #111827
+}
+
+entity "users" as users {
+  * id : INT <<PK>>
+  --
+  email : VARCHAR(255) <<UNIQUE>>
+  password_hash : VARCHAR(255)
+  full_name : VARCHAR(255)
+  phone : VARCHAR(20)
+  role : ENUM('ADMIN','TRAINER','MEMBER')
+  created_at : TIMESTAMP
+}
+
+entity "trainers" as trainers {
+  * id : INT <<PK>>
+  --
+  user_id : INT <<FK users.id, UNIQUE>>
+  specialization : VARCHAR(255)
+  max_daily_hours : INT
+}
+
+entity "members" as members {
+  * id : INT <<PK>>
+  --
+  user_id : INT <<FK users.id, UNIQUE>>
+  trainer_id : INT <<FK trainers.id>>
+  join_date : DATE
+  is_loyal : BOOLEAN
+  pending_bonus_months : INT
+  referred_by : INT <<FK members.id>>
+}
+
+entity "training_goals" as training_goals {
+  * id : INT <<PK>>
+  --
+  member_id : INT <<FK members.id, UNIQUE>>
+  goal_type : VARCHAR(100)
+  target_weight : DECIMAL(5,2)
+  target_bmi : DECIMAL(4,2)
+  target_date : DATE
+  notes : TEXT
+  updated_at : TIMESTAMP
+}
+
+entity "subscriptions" as subscriptions {
+  * id : INT <<PK>>
+  --
+  member_id : INT <<FK members.id>>
+  plan_type : ENUM('QUARTERLY','SEMI_ANNUAL','ANNUAL')
+  start_date : DATE
+  end_date : DATE
+  is_free_extension : BOOLEAN
+  status : ENUM('ACTIVE','EXPIRED','CANCELLED')
+}
+
+entity "training_sessions" as training_sessions {
+  * id : INT <<PK>>
+  --
+  trainer_id : INT <<FK trainers.id>>
+  session_date : DATE
+  start_time : TIME
+  end_time : TIME
+  session_type : VARCHAR(100)
+}
+
+entity "session_members" as session_members {
+  * session_id : INT <<PK, FK training_sessions.id>>
+  * member_id : INT <<PK, FK members.id>>
+}
+
+entity "monthly_evaluations" as monthly_evaluations {
+  * id : INT <<PK>>
+  --
+  member_id : INT <<FK members.id>>
+  trainer_id : INT <<FK trainers.id>>
+  month_year : DATE <<UNIQUE member/month>>
+  target_weight : DECIMAL(5,2)
+  actual_weight : DECIMAL(5,2)
+  target_bmi : DECIMAL(4,2)
+  actual_bmi : DECIMAL(4,2)
+  notes : TEXT
+  created_at : TIMESTAMP
+}
+
+entity "events" as events {
+  * id : INT <<PK>>
+  --
+  title : VARCHAR(255)
+  description : TEXT
+  event_date : TIMESTAMP
+  image_url : VARCHAR(500)
+  created_by : INT <<FK users.id>>
+}
+
+users "1" -- "0..1" trainers : user_id
+users "1" -- "0..1" members : user_id
+trainers "1" -- "0..*" members : trainer_id
+members "0..1" -- "0..*" members : referred_by
+members "1" -- "0..1" training_goals : member_id
+members "1" -- "0..*" subscriptions : member_id
+trainers "1" -- "0..*" training_sessions : trainer_id
+training_sessions "1" -- "0..*" session_members : session_id
+members "1" -- "0..*" session_members : member_id
+members "1" -- "0..*" monthly_evaluations : member_id
+trainers "1" -- "0..*" monthly_evaluations : trainer_id
+users "1" -- "0..*" events : created_by
+
+note right of monthly_evaluations
+UNIQUE KEY uq_member_month
+(member_id, month_year)
+end note
+
+@enduml

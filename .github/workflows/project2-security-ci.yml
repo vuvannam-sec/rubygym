@@ -1,0 +1,175 @@
+name: Project 2 Security CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend-test:
+    name: Backend install and test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run backend tests
+        run: npm test
+
+  frontend-test-build:
+    name: Frontend install, test, and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run frontend tests
+        run: CI=true npm test -- --watchAll=false
+
+      - name: Build frontend
+        run: npm run build
+
+  docker-build:
+    name: Docker Compose validation and build
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-test-build]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate compose file
+        run: docker compose config
+
+      - name: Build compose images
+        run: docker compose build
+
+  semgrep-sast:
+    name: Semgrep SAST
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep community rules
+        run: |
+          mkdir -p docs/reports
+          docker run --rm -v "$PWD:/src" -w /src semgrep/semgrep:latest \
+            semgrep scan --metrics=off --config p/ci \
+            --exclude backend/node_modules --exclude frontend/node_modules --exclude frontend/build \
+            --exclude docs/reports --exclude docs/slides \
+            --json --output docs/reports/semgrep-results.json .
+
+      - name: Upload Semgrep report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: semgrep-results
+          path: docs/reports/semgrep-results.json
+          if-no-files-found: warn
+
+  trivy-image-scan:
+    name: Trivy image scan
+    runs-on: ubuntu-latest
+    needs: docker-build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build images for scanning
+        run: docker compose build
+
+      - name: Scan backend image
+        run: |
+          mkdir -p docs/reports
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/docs/reports:/reports" aquasec/trivy:latest \
+            image --exit-code 0 --format json --output /reports/trivy-rubygym-backend.json rubygym-backend:latest
+
+      - name: Scan frontend image
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/docs/reports:/reports" aquasec/trivy:latest \
+            image --exit-code 0 --format json --output /reports/trivy-rubygym-frontend.json rubygym-frontend:latest
+
+      - name: Upload Trivy reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-image-results
+          path: docs/reports/trivy-rubygym-*.json
+          if-no-files-found: warn
+
+  zap-baseline-dast:
+    name: OWASP ZAP baseline DAST
+    runs-on: ubuntu-latest
+    needs: docker-build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Start application stack
+        run: docker compose up -d --build
+
+      - name: Wait for frontend
+        run: |
+          for attempt in {1..30}; do
+            curl -fsS http://127.0.0.1:8080/ >/dev/null && exit 0
+            sleep 2
+          done
+          docker compose logs
+          exit 1
+
+      - name: Run ZAP baseline scan
+        run: |
+          mkdir -p docs/reports
+          set +e
+          docker run --rm --network host -v "$PWD/docs/reports:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py -t http://127.0.0.1:8080 -r zap-baseline.html -J zap-baseline.json -w zap-baseline.md
+          zap_exit=$?
+          set -e
+          echo "$zap_exit" > docs/reports/zap-exit-code.txt
+          if [ "$zap_exit" -gt 2 ]; then
+            exit "$zap_exit"
+          fi
+
+      - name: Stop application stack
+        if: always()
+        run: docker compose down -v
+
+      - name: Upload ZAP reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-baseline-results
+          path: |
+            docs/reports/zap-baseline.*
+            docs/reports/zap-exit-code.txt
+          if-no-files-found: warn

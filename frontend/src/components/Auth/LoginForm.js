@@ -51,8 +51,8 @@ function LoginForm() {
         <div className="auth-hints">
           <strong>Tài khoản demo</strong>
           <p><code>admin@rubygym.com / admin123</code></p>
-          <p><code>trainer@rubygym.com / trainer123</code></p>
-          <p><code>member@rubygym.com / member123</code></p>
+          <p><code>trainer.linh@rubygym.com / trainer123</code></p>
+          <p><code>member.an@rubygym.com / member123</code></p>
         </div>
       </div>
 

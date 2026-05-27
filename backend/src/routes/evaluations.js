@@ -75,11 +75,33 @@ const compareToTarget = (target, actual) => {
   return difference < 0 ? 'IMPROVED' : 'DECLINED';
 };
 
+const getEffectiveTarget = (evaluation, key) => (
+  evaluation[key] !== null && evaluation[key] !== undefined ? evaluation[key] : evaluation[`goal_${key}`]
+);
+
 const withProgress = (evaluation) => ({
   ...evaluation,
-  weight_progress: compareToTarget(evaluation.target_weight, evaluation.actual_weight),
-  bmi_progress: compareToTarget(evaluation.target_bmi, evaluation.actual_bmi)
+  effective_target_weight: getEffectiveTarget(evaluation, 'target_weight'),
+  effective_target_bmi: getEffectiveTarget(evaluation, 'target_bmi'),
+  weight_progress: compareToTarget(getEffectiveTarget(evaluation, 'target_weight'), evaluation.actual_weight),
+  bmi_progress: compareToTarget(getEffectiveTarget(evaluation, 'target_bmi'), evaluation.actual_bmi)
 });
+
+const getMemberGoal = async (memberId) => {
+  const [rows] = await pool.execute(
+    'SELECT target_weight, target_bmi, goal_type, notes FROM training_goals WHERE member_id = ?',
+    [memberId]
+  );
+  return rows.length > 0 ? rows[0] : null;
+};
+
+const normalizeNumber = (value) => {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+
+  return Number(value);
+};
 
 const findDuplicateMonthEvaluation = async (memberId, monthDate, excludeId) => {
   const [rows] = await pool.execute(
@@ -93,12 +115,16 @@ const findDuplicateMonthEvaluation = async (memberId, monthDate, excludeId) => {
 router.get('/', authenticate, async (req, res) => {
   try {
     let query = `
-      SELECT me.*, m_u.full_name as member_name, t_u.full_name as trainer_name
+      SELECT me.*, m_u.full_name as member_name, t_u.full_name as trainer_name,
+             tg.goal_type AS goal_type, tg.target_weight AS goal_target_weight,
+             tg.target_bmi AS goal_target_bmi, tg.target_date AS goal_target_date,
+             tg.notes AS goal_notes
       FROM monthly_evaluations me
       JOIN members m ON me.member_id = m.id
       JOIN users m_u ON m.user_id = m_u.id
       JOIN trainers t ON me.trainer_id = t.id
       JOIN users t_u ON t.user_id = t_u.id
+      LEFT JOIN training_goals tg ON tg.member_id = me.member_id
     `;
     const params = [];
 
@@ -129,12 +155,16 @@ router.get('/:id', authenticate, async (req, res) => {
     }
 
     const [rows] = await pool.execute(`
-      SELECT me.*, m_u.full_name as member_name, t_u.full_name as trainer_name
+      SELECT me.*, m_u.full_name as member_name, t_u.full_name as trainer_name,
+             tg.goal_type AS goal_type, tg.target_weight AS goal_target_weight,
+             tg.target_bmi AS goal_target_bmi, tg.target_date AS goal_target_date,
+             tg.notes AS goal_notes
       FROM monthly_evaluations me
       JOIN members m ON me.member_id = m.id
       JOIN users m_u ON m.user_id = m_u.id
       JOIN trainers t ON me.trainer_id = t.id
       JOIN users t_u ON t.user_id = t_u.id
+      LEFT JOIN training_goals tg ON tg.member_id = me.member_id
       WHERE me.id = ?
     `, [req.params.id]);
 
@@ -186,6 +216,16 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Monthly evaluation already exists for this member' });
     }
 
+    const memberGoal = await getMemberGoal(member_id);
+    const finalTargetWeight = normalizeNumber(target_weight) ?? normalizeNumber(memberGoal?.target_weight);
+    const finalTargetBmi = normalizeNumber(target_bmi) ?? normalizeNumber(memberGoal?.target_bmi);
+    const finalActualWeight = normalizeNumber(actual_weight);
+    const finalActualBmi = normalizeNumber(actual_bmi);
+
+    if (finalTargetWeight === null || finalTargetBmi === null || finalActualWeight === null || finalActualBmi === null) {
+      return res.status(400).json({ error: 'Target and actual weight/BMI are required' });
+    }
+
     const [result] = await pool.execute(
       `INSERT INTO monthly_evaluations
        (member_id, trainer_id, month_year, target_weight, actual_weight, target_bmi, actual_bmi, notes)
@@ -194,10 +234,10 @@ router.post('/', authenticate, async (req, res) => {
         member_id,
         finalTrainerId,
         normalizedMonth,
-        target_weight,
-        actual_weight !== undefined ? actual_weight : null,
-        target_bmi,
-        actual_bmi !== undefined ? actual_bmi : null,
+        finalTargetWeight,
+        finalActualWeight,
+        finalTargetBmi,
+        finalActualBmi,
         notes || null
       ]
     );

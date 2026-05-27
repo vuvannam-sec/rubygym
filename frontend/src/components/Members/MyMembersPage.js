@@ -26,7 +26,12 @@ function MyMembersPage() {
         setMembers(data.map((member) => ({
           id: member.id,
           name: member.full_name,
-          goal: member.is_loyal ? 'Duy trì thể trạng' : 'Theo lộ trình cá nhân',
+          goal: member.goal_type || (member.is_loyal ? 'Duy trì thể trạng' : 'Theo lộ trình cá nhân'),
+          goalDetail: [
+            member.target_weight ? `${member.target_weight}kg` : null,
+            member.target_bmi ? `BMI ${member.target_bmi}` : null,
+            member.target_date ? `đến ${String(member.target_date).slice(0, 10)}` : null
+          ].filter(Boolean).join(' / '),
           nextSession: 'Theo lịch tuần',
           adherence: member.is_loyal ? '90%' : '85%',
           gender: member.gender || trainerMembers.find((fallbackMember) => fallbackMember.id === member.id)?.gender || '',
@@ -90,7 +95,10 @@ function MyMembersPage() {
                       </div>
                     </div>
                   </td>
-                  <td>{member.goal}</td>
+                  <td>
+                    <strong>{member.goal}</strong>
+                    <p>{member.goalDetail || 'Chưa có mục tiêu định lượng'}</p>
+                  </td>
                   <td>{member.nextSession}</td>
                   <td>{member.adherence}</td>
                   <td>

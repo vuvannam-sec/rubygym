@@ -10,6 +10,7 @@ import {
   FiCreditCard,
   FiGift,
   FiHome,
+  FiTarget,
   FiUsers
 } from 'react-icons/fi';
 import { NavLink } from 'react-router-dom';
@@ -34,6 +35,7 @@ const roleLinks = {
   MEMBER: [
     { to: '/member', label: 'Tổng quan', icon: <FiHome /> },
     { to: '/member/schedule', label: 'Lịch tập của tôi', icon: <FiCalendar /> },
+    { to: '/member/goals', label: 'Mục tiêu', icon: <FiTarget /> },
     { to: '/member/results', label: 'Kết quả đánh giá', icon: <FiBarChart2 /> },
     { to: '/member/subscriptions', label: 'Gói tập', icon: <FiCreditCard /> },
     { to: '/member/referrals', label: 'Giới thiệu bạn', icon: <FiGift /> }

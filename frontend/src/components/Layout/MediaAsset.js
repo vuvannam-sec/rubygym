@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { FiImage } from 'react-icons/fi';
-import { getAvatarPlaceholderColor, getMemberInitials } from '../../services/imageUtils';
+import { getAvatarPlaceholderClass, getMemberInitials } from '../../services/imageUtils';
 
 function MediaAsset({
   src,
@@ -16,16 +16,15 @@ function MediaAsset({
   const [hasError, setHasError] = useState(false);
 
   const resolvedInitials = initials || getMemberInitials(fallbackLabel);
-  const avatarColor = getAvatarPlaceholderColor(entityId);
+  const avatarColorClass = getAvatarPlaceholderClass(entityId);
 
   if (!src || hasError) {
     if (fallbackVariant === 'avatar') {
       return (
         <div
-          className={`media-avatar-fallback ${className}`.trim()}
+          className={`media-avatar-fallback ${avatarColorClass} ${className}`.trim()}
           role="img"
           aria-label={alt || fallbackLabel}
-          style={{ background: avatarColor }}
         >
           <span>{resolvedInitials}</span>
           {children}

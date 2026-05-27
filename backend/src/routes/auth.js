@@ -41,7 +41,8 @@ const loadUserContext = async (user) => {
 
   if (user.role === 'MEMBER') {
     const [memberRows] = await pool.execute(`
-      SELECT m.id, m.trainer_id, m.join_date, m.is_loyal, u.full_name AS trainer_name, u.email AS trainer_email, u.phone AS trainer_phone
+      SELECT m.id, m.trainer_id, m.join_date, m.is_loyal, m.pending_bonus_months,
+             u.full_name AS trainer_name, u.email AS trainer_email, u.phone AS trainer_phone
       FROM members m
       LEFT JOIN trainers t ON m.trainer_id = t.id
       LEFT JOIN users u ON t.user_id = u.id
@@ -57,13 +58,14 @@ const loadUserContext = async (user) => {
       contextUser.trainer_email = memberRows[0].trainer_email;
       contextUser.trainer_phone = memberRows[0].trainer_phone;
       contextUser.referral_code = `RUBY-${memberRows[0].id}`;
+      contextUser.pending_bonus_months = memberRows[0].pending_bonus_months || 0;
     }
   }
 
   return contextUser;
 };
 
-const extendReferralBonus = async (referrerMemberId) => {
+const grantReferralBonus = async (referrerMemberId) => {
   if (!referrerMemberId) {
     return;
   }
@@ -77,6 +79,10 @@ const extendReferralBonus = async (referrerMemberId) => {
   `, [referrerMemberId]);
 
   if (subscriptionRows.length === 0) {
+    await pool.execute(
+      'UPDATE members SET pending_bonus_months = COALESCE(pending_bonus_months, 0) + 1 WHERE id = ?',
+      [referrerMemberId]
+    );
     return;
   }
 
@@ -134,7 +140,7 @@ router.post('/register', async (req, res) => {
       [result.insertId, trainerId, join_date || new Date().toISOString().split('T')[0], 0, referrerMemberId]
     );
 
-    await extendReferralBonus(referrerMemberId);
+    await grantReferralBonus(referrerMemberId);
 
     res.status(201).json({
       message: 'User registered',

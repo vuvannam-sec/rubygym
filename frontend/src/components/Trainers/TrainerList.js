@@ -1,9 +1,20 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FiActivity, FiCheck, FiEdit, FiEye, FiPlus, FiTrash2, FiX } from 'react-icons/fi';
 import { trainers as initialTrainers } from '../../data/mockData';
+import api from '../../services/api';
+import { normalizeApiError } from '../../services/fallbacks';
 import { getTrainerImage } from '../../services/imageUtils';
 import MediaAsset from '../Layout/MediaAsset';
 import { ActionIconButton, EmptyState, Modal, Pagination, SearchField, SectionHeader, StatusBadge, Toast } from '../Layout/ProductUI';
+
+const defaultForm = {
+  name: '',
+  email: '',
+  password: '',
+  specialization: '',
+  phone: '',
+  max_daily_hours: 8
+};
 
 function TrainerList() {
   const [trainers, setTrainers] = useState(initialTrainers);
@@ -12,18 +23,58 @@ function TrainerList() {
   const [page, setPage] = useState(1);
   const [toast, setToast] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [viewingTrainer, setViewingTrainer] = useState(null);
   const [editingTrainer, setEditingTrainer] = useState(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    specialization: '',
-    phone: '',
-    status: 'Đang hoạt động'
-  });
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState(defaultForm);
   const pageSize = 4;
+
+  const mapTrainer = useCallback((trainer, memberRows = []) => {
+    const fallbackTrainer = initialTrainers.find((item) => item.id === trainer.id);
+    const clients = memberRows.filter((member) => Number(member.trainer_id) === Number(trainer.id)).length;
+
+    return {
+      id: trainer.id,
+      name: trainer.full_name,
+      email: trainer.email || '',
+      specialization: trainer.specialization || 'Đang cập nhật',
+      phone: trainer.phone || '',
+      max_daily_hours: trainer.max_daily_hours || 8,
+      status: 'Đang hoạt động',
+      clients,
+      image: fallbackTrainer?.image || ''
+    };
+  }, []);
+
+  const loadTrainers = useCallback(async () => {
+    const [trainerResponse, memberResponse] = await Promise.all([
+      api.get('/trainers'),
+      api.get('/members')
+    ]);
+
+    setTrainers(trainerResponse.data.map((trainer) => mapTrainer(trainer, memberResponse.data)));
+  }, [mapTrainer]);
+
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        await loadTrainers();
+      } catch (error) {
+        setToast({
+          type: 'info',
+          title: 'Đang hiển thị dữ liệu mẫu',
+          message: normalizeApiError(error, 'Không tải được danh sách huấn luyện viên từ backend.')
+        });
+      }
+    };
+
+    loadInitialData();
+  }, [loadTrainers]);
 
   const filteredTrainers = useMemo(() => trainers.filter((trainer) => {
     const matchQuery = trainer.name.toLowerCase().includes(query.toLowerCase())
-      || trainer.specialization.toLowerCase().includes(query.toLowerCase());
+      || trainer.specialization.toLowerCase().includes(query.toLowerCase())
+      || String(trainer.email || '').toLowerCase().includes(query.toLowerCase());
     const matchStatus = statusFilter === 'Tất cả' || trainer.status === statusFilter;
     return matchQuery && matchStatus;
   }), [trainers, query, statusFilter]);
@@ -32,45 +83,97 @@ function TrainerList() {
   const pagedTrainers = filteredTrainers.slice((page - 1) * pageSize, page * pageSize);
 
   const openCreateModal = () => {
+    setViewingTrainer(null);
     setEditingTrainer(null);
-    setFormData({ name: '', specialization: '', phone: '', status: 'Đang hoạt động' });
+    setFormData(defaultForm);
+    setModalOpen(true);
+  };
+
+  const openViewModal = (trainer) => {
+    setViewingTrainer(trainer);
+    setEditingTrainer(null);
     setModalOpen(true);
   };
 
   const openEditModal = (trainer) => {
+    setViewingTrainer(null);
     setEditingTrainer(trainer);
     setFormData({
       name: trainer.name,
+      email: trainer.email || '',
+      password: '',
       specialization: trainer.specialization,
       phone: trainer.phone,
-      status: trainer.status
+      max_daily_hours: trainer.max_daily_hours || 8
     });
     setModalOpen(true);
   };
 
-  const handleSave = () => {
-    if (!formData.name || !formData.specialization || !formData.phone) {
-      setToast({ type: 'error', title: 'Thiếu thông tin', message: 'Vui lòng nhập đầy đủ họ tên, chuyên môn và số điện thoại.' });
+  const handleSave = async () => {
+    if (!formData.name || !formData.email || !formData.specialization || !formData.phone) {
+      setToast({ type: 'error', title: 'Thiếu thông tin', message: 'Vui lòng nhập họ tên, email, chuyên môn và số điện thoại.' });
       return;
     }
 
-    if (editingTrainer) {
-      setTrainers((current) => current.map((trainer) => (
-        trainer.id === editingTrainer.id ? { ...trainer, ...formData } : trainer
-      )));
-      setToast({ type: 'success', title: 'Cập nhật thành công', message: 'Thông tin huấn luyện viên đã được cập nhật.' });
-    } else {
-      setTrainers((current) => [...current, { id: Date.now(), clients: 0, ...formData }]);
-      setToast({ type: 'success', title: 'Đã thêm huấn luyện viên', message: 'Bản ghi mới đã sẵn sàng trong danh sách.' });
+    if (!editingTrainer && !formData.password) {
+      setToast({ type: 'error', title: 'Thiếu mật khẩu', message: 'Vui lòng nhập mật khẩu ban đầu cho huấn luyện viên mới.' });
+      return;
     }
 
-    setModalOpen(false);
+    setSaving(true);
+
+    try {
+      if (editingTrainer) {
+        await api.put(`/trainers/${editingTrainer.id}`, {
+          full_name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          specialization: formData.specialization,
+          max_daily_hours: Number(formData.max_daily_hours) || 8
+        });
+
+        setToast({ type: 'success', title: 'Cập nhật thành công', message: 'Thông tin huấn luyện viên đã được lưu vào backend.' });
+      } else {
+        await api.post('/trainers', {
+          full_name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          phone: formData.phone,
+          specialization: formData.specialization,
+          max_daily_hours: Number(formData.max_daily_hours) || 8
+        });
+
+        setToast({ type: 'success', title: 'Đã thêm huấn luyện viên', message: 'Hồ sơ mới đã được lưu vào backend.' });
+      }
+
+      await loadTrainers();
+      setModalOpen(false);
+    } catch (error) {
+      setToast({
+        type: 'error',
+        title: editingTrainer ? 'Không cập nhật được huấn luyện viên' : 'Không thêm được huấn luyện viên',
+        message: normalizeApiError(error, 'Backend từ chối thao tác. Vui lòng kiểm tra dữ liệu và thử lại.')
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleDelete = (id) => {
-    setTrainers((current) => current.filter((trainer) => trainer.id !== id));
-    setToast({ type: 'success', title: 'Đã xóa bản ghi', message: 'Huấn luyện viên đã được xóa khỏi danh sách hiển thị.' });
+  const handleDelete = async (id) => {
+    try {
+      await api.delete(`/trainers/${id}`);
+      await loadTrainers();
+      setToast({ type: 'success', title: 'Đã xóa bản ghi', message: 'Huấn luyện viên đã được xóa khỏi backend.' });
+    } catch (error) {
+      setToast({
+        type: 'error',
+        title: 'Không xóa được huấn luyện viên',
+        message: normalizeApiError(error, 'Backend từ chối thao tác xóa.')
+      });
+    }
   };
+
+  const isViewMode = Boolean(viewingTrainer);
 
   return (
     <section className="page-card">
@@ -78,7 +181,7 @@ function TrainerList() {
       <SectionHeader
         eyebrow="Admin / Huấn luyện viên"
         title="Quản lý huấn luyện viên"
-        subtitle="Tìm kiếm nhanh, lọc trạng thái và cập nhật hồ sơ huấn luyện viên bằng modal thao tác."
+        subtitle="Tìm kiếm nhanh, xem chi tiết và cập nhật hồ sơ huấn luyện viên bằng dữ liệu backend."
         actions={(
           <button type="button" className="primary-button" onClick={openCreateModal}>
             <FiPlus />
@@ -94,7 +197,7 @@ function TrainerList() {
             setQuery(event.target.value);
             setPage(1);
           }}
-          placeholder="Tìm theo tên hoặc chuyên môn"
+          placeholder="Tìm theo tên, email hoặc chuyên môn"
         />
         <select
           value={statusFilter}
@@ -105,7 +208,6 @@ function TrainerList() {
         >
           <option>Tất cả</option>
           <option>Đang hoạt động</option>
-          <option>Tạm nghỉ</option>
         </select>
       </div>
 
@@ -137,7 +239,7 @@ function TrainerList() {
                         />
                         <div>
                           <strong>{trainer.name}</strong>
-                          <p>{trainer.specialization}</p>
+                          <p>{trainer.email || trainer.specialization}</p>
                         </div>
                       </div>
                     </td>
@@ -145,10 +247,10 @@ function TrainerList() {
                     <td>{trainer.phone}</td>
                     <td>{trainer.clients}</td>
                     <td>
-                      <StatusBadge tone={trainer.status === 'Đang hoạt động' ? 'success' : 'neutral'}>{trainer.status}</StatusBadge>
+                      <StatusBadge tone="success">{trainer.status}</StatusBadge>
                     </td>
                     <td className="table-actions">
-                      <ActionIconButton label="Xem huấn luyện viên" onClick={() => openEditModal(trainer)}>
+                      <ActionIconButton label="Xem huấn luyện viên" onClick={() => openViewModal(trainer)}>
                         <FiEye />
                       </ActionIconButton>
                       <ActionIconButton label="Sửa huấn luyện viên" onClick={() => openEditModal(trainer)}>
@@ -181,54 +283,67 @@ function TrainerList() {
 
       <Modal
         open={modalOpen}
-        title={editingTrainer ? 'Cập nhật huấn luyện viên' : 'Thêm huấn luyện viên'}
+        title={isViewMode ? 'Chi tiết huấn luyện viên' : editingTrainer ? 'Cập nhật huấn luyện viên' : 'Thêm huấn luyện viên'}
         onClose={() => setModalOpen(false)}
-        actions={(
+        actions={isViewMode ? (
+          <button type="button" className="ghost-button" onClick={() => setModalOpen(false)}>
+            <FiX />
+            Đóng
+          </button>
+        ) : (
           <>
             <button type="button" className="ghost-button" onClick={() => setModalOpen(false)}>
               <FiX />
               Hủy
             </button>
-            <button type="button" className="primary-button" onClick={handleSave}>
+            <button type="button" className="primary-button" onClick={handleSave} disabled={saving}>
               <FiCheck />
-              Lưu thay đổi
+              {saving ? 'Đang lưu' : 'Lưu thay đổi'}
             </button>
           </>
         )}
       >
-        <div className="form-grid single-column">
-          <label>
-            Họ tên
-            <input
-              value={formData.name}
-              onChange={(event) => setFormData((current) => ({ ...current, name: event.target.value }))}
-            />
-          </label>
-          <label>
-            Chuyên môn
-            <input
-              value={formData.specialization}
-              onChange={(event) => setFormData((current) => ({ ...current, specialization: event.target.value }))}
-            />
-          </label>
-          <label>
-            Số điện thoại
-            <input
-              value={formData.phone}
-              onChange={(event) => setFormData((current) => ({ ...current, phone: event.target.value }))}
-            />
-          </label>
-          <label>
-            Trạng thái
-            <select
-              value={formData.status}
-              onChange={(event) => setFormData((current) => ({ ...current, status: event.target.value }))}
-            >
-              <option>Đang hoạt động</option>
-              <option>Tạm nghỉ</option>
-            </select>
-          </label>
-        </div>
+        {isViewMode ? (
+          <div className="readonly-grid">
+            <div><span>Mã HLV</span><strong>{viewingTrainer.id}</strong></div>
+            <div><span>Họ tên</span><strong>{viewingTrainer.name}</strong></div>
+            <div><span>Email</span><strong>{viewingTrainer.email || 'Chưa cập nhật'}</strong></div>
+            <div><span>Số điện thoại</span><strong>{viewingTrainer.phone || 'Chưa cập nhật'}</strong></div>
+            <div><span>Chuyên môn</span><strong>{viewingTrainer.specialization}</strong></div>
+            <div><span>Giờ tối đa/ngày</span><strong>{viewingTrainer.max_daily_hours}</strong></div>
+            <div><span>Học viên đang phụ trách</span><strong>{viewingTrainer.clients}</strong></div>
+            <div><span>Trạng thái</span><strong>{viewingTrainer.status}</strong></div>
+          </div>
+        ) : (
+          <div className="form-grid single-column">
+            <label>
+              Họ tên
+              <input value={formData.name} onChange={(event) => setFormData((current) => ({ ...current, name: event.target.value }))} />
+            </label>
+            <label>
+              Email
+              <input type="email" value={formData.email} onChange={(event) => setFormData((current) => ({ ...current, email: event.target.value }))} />
+            </label>
+            {!editingTrainer ? (
+              <label>
+                Mật khẩu ban đầu
+                <input type="password" value={formData.password} onChange={(event) => setFormData((current) => ({ ...current, password: event.target.value }))} />
+              </label>
+            ) : null}
+            <label>
+              Chuyên môn
+              <input value={formData.specialization} onChange={(event) => setFormData((current) => ({ ...current, specialization: event.target.value }))} />
+            </label>
+            <label>
+              Số điện thoại
+              <input value={formData.phone} onChange={(event) => setFormData((current) => ({ ...current, phone: event.target.value }))} />
+            </label>
+            <label>
+              Giờ tối đa/ngày
+              <input type="number" min="1" max="12" value={formData.max_daily_hours} onChange={(event) => setFormData((current) => ({ ...current, max_daily_hours: event.target.value }))} />
+            </label>
+          </div>
+        )}
       </Modal>
     </section>
   );

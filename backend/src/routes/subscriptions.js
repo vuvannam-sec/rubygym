@@ -55,9 +55,9 @@ const canAccessSubscription = async (req, subscriptionId) => {
   return false;
 };
 
-const getSubscriptionMeta = async (memberId, startDate, planType) => {
+const getSubscriptionMeta = async (memberId, startDate, planType, options = {}) => {
   const [memberRows] = await pool.execute(
-    'SELECT id, join_date, is_loyal FROM members WHERE id = ?',
+    'SELECT id, join_date, is_loyal, pending_bonus_months FROM members WHERE id = ?',
     [memberId]
   );
 
@@ -81,8 +81,9 @@ const getSubscriptionMeta = async (memberId, startDate, planType) => {
   );
 
   const isRenewal = subscriptionRows.length > 0;
-  const loyalBonusMonths = isLoyal && isRenewal ? 3 : 0;
-  const totalMonths = (PLAN_MONTHS[planType] || 0) + loyalBonusMonths;
+  const loyalBonusMonths = isLoyal && isRenewal && planType === 'ANNUAL' ? 3 : 0;
+  const referralBonusMonths = options.includePendingBonus ? Number(member.pending_bonus_months || 0) : 0;
+  const totalMonths = (PLAN_MONTHS[planType] || 0) + loyalBonusMonths + referralBonusMonths;
 
   if (!totalMonths) {
     throw new Error('Invalid plan type');
@@ -95,6 +96,7 @@ const getSubscriptionMeta = async (memberId, startDate, planType) => {
     isLoyal,
     isRenewal,
     loyalBonusMonths,
+    referralBonusMonths,
     endDate: addMonths(startDate, totalMonths),
     status: start >= new Date(todayString) || startDate === todayString ? 'ACTIVE' : 'ACTIVE'
   };
@@ -104,7 +106,7 @@ const getSubscriptionMeta = async (memberId, startDate, planType) => {
 router.get('/', authenticate, async (req, res) => {
   try {
     let query = `
-      SELECT s.*, u.full_name as member_name, u.email as member_email, m.join_date, m.is_loyal
+      SELECT s.*, u.full_name as member_name, u.email as member_email, m.join_date, m.is_loyal, m.pending_bonus_months
       FROM subscriptions s
       JOIN members m ON s.member_id = m.id
       JOIN users u ON m.user_id = u.id
@@ -138,7 +140,7 @@ router.get('/:id', authenticate, async (req, res) => {
     }
 
     const [rows] = await pool.execute(`
-      SELECT s.*, u.full_name as member_name, u.email as member_email, m.join_date, m.is_loyal
+      SELECT s.*, u.full_name as member_name, u.email as member_email, m.join_date, m.is_loyal, m.pending_bonus_months
       FROM subscriptions s
       JOIN members m ON s.member_id = m.id
       JOIN users u ON m.user_id = u.id
@@ -171,7 +173,7 @@ router.post('/', authenticate, async (req, res) => {
       }
     }
 
-    const meta = await getSubscriptionMeta(member_id, start_date, plan_type);
+    const meta = await getSubscriptionMeta(member_id, start_date, plan_type, { includePendingBonus: true });
 
     const [result] = await pool.execute(
       `INSERT INTO subscriptions (member_id, plan_type, start_date, end_date, is_free_extension, status)
@@ -181,10 +183,14 @@ router.post('/', authenticate, async (req, res) => {
         plan_type,
         start_date,
         meta.endDate,
-        meta.loyalBonusMonths + meta.referralMonths > 0 ? 1 : 0,
+        meta.loyalBonusMonths > 0 || meta.referralBonusMonths > 0 ? 1 : 0,
         'ACTIVE'
       ]
     );
+
+    if (meta.referralBonusMonths > 0) {
+      await pool.execute('UPDATE members SET pending_bonus_months = 0 WHERE id = ?', [member_id]);
+    }
 
     res.status(201).json({
       message: 'Subscription created',
@@ -192,6 +198,7 @@ router.post('/', authenticate, async (req, res) => {
       is_loyal: meta.isLoyal,
       is_renewal: meta.isRenewal,
       free_extension_months: meta.loyalBonusMonths,
+      referral_bonus_months: meta.referralBonusMonths,
       end_date: meta.endDate
     });
   } catch (err) {
@@ -231,7 +238,7 @@ router.put('/:id', authenticate, async (req, res) => {
         planType,
         startDate,
         meta.endDate,
-        meta.loyalBonusMonths + meta.referralMonths > 0 ? 1 : 0,
+        meta.loyalBonusMonths > 0 ? 1 : 0,
         req.body.status || existing.status,
         req.params.id
       ]
@@ -242,6 +249,7 @@ router.put('/:id', authenticate, async (req, res) => {
       is_loyal: meta.isLoyal,
       is_renewal: meta.isRenewal,
       free_extension_months: meta.loyalBonusMonths,
+      referral_bonus_months: meta.referralBonusMonths,
       end_date: meta.endDate
     });
   } catch (err) {

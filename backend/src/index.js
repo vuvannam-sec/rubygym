@@ -9,10 +9,18 @@ const scheduleRoutes = require('./routes/schedule');
 const subscriptionRoutes = require('./routes/subscriptions');
 const evaluationRoutes = require('./routes/evaluations');
 const eventRoutes = require('./routes/events');
+const goalRoutes = require('./routes/goals');
 
 const app = express();
 
-app.use(cors());
+const allowedOrigins = (process.env.CORS_ORIGIN || process.env.CORS_ORIGINS || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(cors({
+  origin: allowedOrigins.length > 0 ? allowedOrigins : true
+}));
 app.use(express.json());
 
 // Routes
@@ -27,5 +35,6 @@ app.use('/api/schedule', scheduleRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/evaluations', evaluationRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/goals', goalRoutes);
 
 module.exports = app;

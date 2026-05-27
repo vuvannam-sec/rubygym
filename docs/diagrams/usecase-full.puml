@@ -1,0 +1,81 @@
+@startuml
+!pragma layout elk
+left to right direction
+
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam defaultFontName Arial
+skinparam defaultTextAlignment center
+skinparam ArrowColor #334155
+skinparam actor {
+  BorderColor #334155
+  FontColor #0f172a
+}
+skinparam rectangle {
+  BorderColor #0f172a
+  BackgroundColor #ffffff
+  FontColor #0f172a
+}
+skinparam package {
+  BorderColor #cbd5e1
+  BackgroundColor #f8fafc
+  FontColor #0f172a
+}
+skinparam usecase {
+  BorderColor #334155
+  BackgroundColor #ffffff
+  FontColor #0f172a
+}
+
+actor "Guest" as Guest
+actor "Member" as Member
+actor "Trainer" as Trainer
+actor "Admin" as Admin
+
+rectangle "RubyGYM System" {
+  package "Public / Authentication" as PPublic {
+    usecase "View Public Events /\nGym Information" as UC_PublicInfo
+    usecase "View Trainer Profiles" as UC_PublicTrainers
+    usecase "Register Account" as UC_Register
+    usecase "Login" as UC_PublicLogin
+  }
+
+  package "Member Features" as PMember {
+    usecase "Login" as UC_MemberLogin
+    usecase "View Member Dashboard" as UC_MemberDashboard
+    usecase "View Personal Schedule" as UC_PersonalSchedule
+    usecase "View Subscription Status" as UC_SubscriptionStatus
+    usecase "Register / Renew\nSubscription Plan" as UC_RenewSubscription
+    usecase "View Monthly Evaluation\nResults" as UC_ViewEvaluationResults
+    usecase "View Referral Information /\nReferral Code" as UC_ViewReferral
+  }
+
+  package "Trainer Features" as PTrainer {
+    usecase "Login" as UC_TrainerLogin
+    usecase "View Trainer Dashboard" as UC_TrainerDashboard
+    usecase "View Assigned Clients" as UC_AssignedClients
+    usecase "View Trainer Schedule" as UC_TrainerSchedule
+    usecase "Create / Update\nTraining Session" as UC_TrainerSession
+    usecase "Perform Monthly Evaluation" as UC_PerformEvaluation
+    usecase "Manage Evaluation Records" as UC_ManageEvaluationRecords
+  }
+
+  package "Admin Features" as PAdmin {
+    usecase "Login" as UC_AdminLogin
+    usecase "View Admin Dashboard /\nReports" as UC_AdminDashboard
+    usecase "Manage Trainers" as UC_ManageTrainers
+    usecase "Manage Members" as UC_ManageMembers
+    usecase "Manage Subscriptions" as UC_ManageSubscriptions
+    usecase "Manage Training Sessions" as UC_ManageSessions
+    usecase "Manage Monthly Evaluations" as UC_ManageEvaluations
+    usecase "Manage Events" as UC_ManageEvents
+  }
+}
+
+Guest --> PPublic
+Member --> PMember
+Trainer --> PTrainer
+Admin --> PAdmin
+
+@enduml

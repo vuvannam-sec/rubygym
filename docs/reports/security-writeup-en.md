@@ -221,12 +221,12 @@ Generated evidence:
 - Frontend still has 28 npm audit findings because `react-scripts` transitive fixes require breaking migration.
 - Demo secrets remain in Docker Compose for classroom local setup and must not be used in production.
 - Main route error handling still often returns raw `err.message`.
-- No GitHub-hosted Actions run was executed from this local environment; workflow YAML was parsed locally and commands were run manually.
+- GitHub Actions passed after the workflow was pushed. Future runs should still be checked because scanner databases and action runtimes change over time.
 
 ## 14. Future Improvements
 
 Recommended next work:
-- Push the workflow to GitHub and run `workflow_dispatch`.
+- Monitor GitHub Actions after each submission push and rerun `workflow_dispatch` when fresh evidence is required.
 - Add audit logging for authentication, subscription, schedule, evaluation, and admin changes.
 - Add express rate limiting.
 - Add validation middleware such as Joi, Zod, or express-validator.

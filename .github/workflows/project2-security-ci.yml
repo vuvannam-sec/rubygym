@@ -18,10 +18,10 @@ jobs:
         working-directory: backend
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
@@ -41,10 +41,10 @@ jobs:
         working-directory: frontend
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
@@ -65,7 +65,7 @@ jobs:
     needs: [backend-test, frontend-test-build]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Validate compose file
         run: docker compose config
@@ -78,7 +78,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Run Semgrep community rules
         run: |
@@ -90,7 +90,7 @@ jobs:
             --json --output docs/reports/semgrep-results.json .
 
       - name: Upload Semgrep report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: semgrep-results
@@ -103,7 +103,7 @@ jobs:
     needs: docker-build
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build images for scanning
         run: docker compose build
@@ -120,7 +120,7 @@ jobs:
             image --exit-code 0 --format json --output /reports/trivy-rubygym-frontend.json rubygym-frontend:latest
 
       - name: Upload Trivy reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: trivy-image-results
@@ -133,7 +133,7 @@ jobs:
     needs: docker-build
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Start application stack
         run: docker compose up -d --build
@@ -165,7 +165,7 @@ jobs:
         run: docker compose down -v
 
       - name: Upload ZAP reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: zap-baseline-results

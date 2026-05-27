@@ -1,7 +1,16 @@
 **/node_modules/
 backend/.env
 frontend/.env
+**/.env.local
+**/.env.development.local
+**/.env.test.local
+**/.env.production.local
 *.log
+build/
 dist/
 coverage/
+mysql-data/
+db-data/
+docker/mysql-data/
+docker/db-data/
 .DS_Store

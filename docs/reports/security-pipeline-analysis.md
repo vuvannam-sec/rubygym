@@ -14,7 +14,7 @@ Workflow triggers:
 Permissions:
 - `contents: read` only.
 
-The workflow avoids unsupported claims. It produces artifacts for scanner output and keeps warnings visible for triage.
+The workflow avoids unsupported claims. It produces artifacts for scanner output and keeps warnings visible for triage. After the first successful GitHub-hosted run, the workflow actions were upgraded to current stable major versions to address GitHub's Node.js 20 action-runtime deprecation warnings.
 
 ## Job Analysis
 
@@ -125,7 +125,7 @@ This is not required for Goal 2 because the reports in `docs/reports` already pr
 
 | Limitation | Impact | Recommended improvement |
 |---|---|---|
-| No GitHub Actions run was executed inside this local environment | Workflow syntax was parsed locally, but CI runtime was not observed | Push to GitHub and run `workflow_dispatch` |
+| Future GitHub Actions runtime changes can affect third-party actions | A workflow that passed before may later show deprecation warnings or require action upgrades | Keep actions on supported stable major versions and monitor every final submission run |
 | ZAP scan is unauthenticated | Does not test protected admin/trainer/member workflows | Add seeded login flow and authenticated ZAP context |
 | Semgrep uses community rules | May miss business-logic vulnerabilities | Add custom rules for Express route security and secrets |
 | Trivy CVE DB changes over time | Results may differ in later runs | Keep JSON artifacts per submission/run |

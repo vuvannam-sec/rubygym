@@ -126,6 +126,10 @@ const validateSessionRules = async ({ trainer_id, session_date, start_time, end_
     return 'A session can have at most 3 members';
   }
 
+  if (member_ids && member_ids.length === 0) {
+    return 'Session must include at least one member';
+  }
+
   const [trainerOverlapRows] = await pool.execute(`
     SELECT id
     FROM training_sessions

@@ -10,7 +10,12 @@ const pool = require('../src/config/database');
 const app = require('../src/index');
 
 const createToken = (payload) => jwt.sign(payload, process.env.JWT_SECRET);
-const today = () => new Date().toISOString().split('T')[0];
+// Use LOCAL date parts (not UTC) so it matches the server's local-date scheduling cycle.
+// Using toISOString() here caused a timezone-boundary flake (UTC vs +07:00) after local midnight.
+const today = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 
 describe('Schedule Routes', () => {
   beforeEach(() => {
@@ -51,6 +56,24 @@ describe('Schedule Routes', () => {
 
     expect(res.statusCode).toBe(400);
     expect(res.body.error).toBe('Session must be within operating hours');
+  });
+
+  test('POST /api/schedule should reject empty member list', async () => {
+    const token = createToken({ id: 1, role: 'ADMIN', email: 'admin@rubygym.com' });
+
+    const res = await request(app)
+      .post('/api/schedule')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        trainer_id: 1,
+        session_date: today(),
+        start_time: '05:30:00',
+        end_time: '06:30:00',
+        member_ids: []
+      });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toBe('Session must include at least one member');
   });
 
   test('GET /api/schedule/member/:memberId should reject member reading another schedule', async () => {

@@ -1,0 +1,37 @@
+@startuml MonthlyEvaluation_Sequence
+title RubyGYM - Monthly Evaluation
+
+actor Trainer
+participant "Frontend" as FE
+participant "Backend" as BE
+database "MySQL" as DB
+
+Trainer -> FE: Open monthly evaluation, pick client + month
+FE -> BE: GET /api/trainers/:id/clients
+BE --> FE: assigned members (with current goal)
+FE -> Trainer: Pre-fill target weight/BMI from member goal
+
+Trainer -> FE: Enter actual weight, actual BMI, notes
+FE -> BE: POST /api/evaluations\n{member_id, month_year, actual_weight, actual_bmi, notes}
+BE -> BE: Authorize role TRAINER/ADMIN
+BE -> DB: SELECT members WHERE id AND trainer_id (ownership)
+alt member not owned by trainer
+  BE --> FE: 400 "Trainer can only evaluate their own clients"
+else owned
+  BE -> DB: SELECT existing evaluation (member_id, month_year)
+  alt duplicate month
+    BE --> FE: 400 "Monthly evaluation already exists"
+  else new
+    BE -> DB: SELECT training_goals -> fallback target if not provided
+    BE -> DB: INSERT INTO monthly_evaluations
+    DB --> BE: evaluationId
+    BE --> FE: 201 {evaluationId}
+    FE --> Trainer: Show success
+  end
+end
+note over BE
+Progress (improved/maintained/declined) is computed by
+comparing actual vs target (from goal) on read.
+Member only views results (UC: View Results).
+end note
+@enduml

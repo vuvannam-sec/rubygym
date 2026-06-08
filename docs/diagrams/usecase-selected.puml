@@ -38,6 +38,7 @@ rectangle "RubyGYM System" {
   usecase "UC03 Create Training Session" as UC03
   usecase "UC04 View Personal Schedule" as UC04
   usecase "UC05 Perform Monthly Evaluation" as UC05
+  usecase "UC06 Set Training Goal" as UC06
 }
 
 Admin -- UC01
@@ -48,6 +49,7 @@ Admin -- UC03
 Member -- UC04
 Trainer -- UC05
 Admin -- UC05
+Member -- UC06
 
 note right of UC03
 Member is not an actor for this use case.
@@ -60,6 +62,14 @@ Trainer or Admin can perform the evaluation.
 Member only views evaluation results.
 Evaluation reads Member's saved training goal
 when target values are available.
+end note
+
+note bottom of UC06
+Only the Member creates/edits their own goal
+(single source of truth). Trainer and Admin
+read it but cannot modify it (ADR-001).
+The goal is set on the Goals page, not during
+onboarding (ADR-002).
 end note
 
 @enduml

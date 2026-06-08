@@ -1,0 +1,29 @@
+@startuml Onboarding_Sequence
+title RubyGYM - Member Onboarding (metrics + plan + trainer)
+
+actor Member
+participant "Frontend" as FE
+participant "Backend" as BE
+database "MySQL" as DB
+
+Member -> FE: Open onboarding after first login
+FE -> BE: GET /api/members/me/onboarding
+BE -> DB: SELECT member, latest subscription, trainers
+DB --> BE: data
+BE --> FE: {completed, missing_steps:[PROFILE_METRICS, SUBSCRIPTION], trainers}
+note over FE, BE
+ADR-002: onboarding scope = body metrics + plan + trainer.
+Training goal is NOT part of onboarding.
+end note
+
+Member -> FE: Enter weight, height, plan, trainer preference
+FE -> BE: PUT /api/members/me/onboarding\n{current_weight, height_cm, trainer_id, plan_type, start_date}
+BE -> BE: Validate metrics ranges + plan type
+BE -> DB: UPDATE members SET trainer_id, current_weight, height_cm
+BE -> DB: INSERT/UPDATE subscriptions (compute end_date + bonuses)
+note right of BE
+No write to training_goals here.
+end note
+BE --> FE: 200 {completed:true, subscription}
+FE --> Member: Redirect to dashboard + hint to set goal
+@enduml

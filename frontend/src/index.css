@@ -1,10 +1,10 @@
 html,
 body {
   margin: 0;
-  font-family: 'Segoe UI', sans-serif;
-  background: #f1f5f9;
-  color: #0f172a;
-  line-height: 1.5;
+  font-family: var(--rg-font);
+  background: var(--rg-bg);
+  color: var(--rg-text);
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -18,12 +18,12 @@ body {
 }
 
 a {
-  color: #2563eb;
+  color: var(--rg-accent);
   transition: color 0.2s ease;
 }
 
 a:hover {
-  color: #1d4ed8;
+  color: var(--rg-accent-2);
 }
 
 p {
@@ -34,7 +34,10 @@ h1,
 h2,
 h3 {
   margin-top: 0;
-  line-height: 1.25;
+  line-height: 1.2;
+  font-family: var(--rg-font-display);
+  color: var(--rg-heading);
+  letter-spacing: -0.01em;
 }
 
 button,
@@ -42,4 +45,25 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+::selection {
+  background: var(--rg-accent);
+  color: var(--rg-accent-contrast);
+}
+
+/* Dark, slim scrollbars to match the gym theme */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--rg-surface-3) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--rg-surface-3);
+  border-radius: var(--rg-radius-pill);
 }

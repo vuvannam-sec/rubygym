@@ -1,10 +1,27 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FiCheck, FiSave } from 'react-icons/fi';
-import { memberPlan } from '../../data/mockData';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { normalizeApiError } from '../../services/fallbacks';
 import { SectionHeader, StatusBadge, Toast } from '../Layout/ProductUI';
+
+const planLabels = {
+  QUARTERLY: 'Gói 3 tháng',
+  SEMI_ANNUAL: 'Gói 6 tháng',
+  ANNUAL: 'Gói 12 tháng'
+};
+
+const subscriptionStatusLabels = {
+  ACTIVE: 'Đang hoạt động',
+  EXPIRED: 'Hết hạn',
+  CANCELLED: 'Đã hủy'
+};
+
+const availablePerks = [
+  'Đặt lịch ưu tiên trong tài khoản',
+  'Theo dõi lịch tập và đánh giá tháng',
+  'Nhận thông báo sự kiện nội bộ'
+];
 
 function PlanSelector() {
   const { user } = useAuth();
@@ -18,6 +35,9 @@ function PlanSelector() {
 
   useEffect(() => {
     const loadSubscriptions = async () => {
+      setSubscriptions([]);
+      setIsLoyal(false);
+
       if (!user?.member_id) {
         return;
       }
@@ -38,6 +58,7 @@ function PlanSelector() {
   }, [user]);
 
   const activeSubscription = useMemo(() => subscriptions[0] || null, [subscriptions]);
+  const currentPlanLabel = activeSubscription ? (planLabels[activeSubscription.plan_type] || activeSubscription.plan_type) : 'Chưa có gói tập';
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -60,7 +81,7 @@ function PlanSelector() {
       setToast({
         type: 'success',
         title: 'Đã lưu gói tập',
-        message: `Hạn mới của bạn là ${data.end_date}. Loyal: ${data.free_extension_months} tháng, giới thiệu: ${data.referral_bonus_months || 0} tháng.`
+        message: `Hạn mới của bạn là ${data.end_date}. Ưu đãi thân thiết: ${data.free_extension_months} tháng, thưởng giới thiệu: ${data.referral_bonus_months || 0} tháng.`
       });
       setSubscriptions((current) => [{
         id: data.subscriptionId,
@@ -93,29 +114,33 @@ function PlanSelector() {
         <article className="dashboard-panel">
           <div className="panel-heading">
             <div>
-              <h3>{activeSubscription?.plan_type || memberPlan.name}</h3>
-              <p>Huấn luyện viên đồng hành: {user?.trainer_name || memberPlan.trainer}</p>
+              <h3>{currentPlanLabel}</h3>
+              <p>
+                {activeSubscription
+                  ? `Hiệu lực từ ${activeSubscription.start_date} đến ${activeSubscription.end_date}`
+                  : 'Chọn gói bên dưới để kích hoạt tài khoản hội viên.'}
+              </p>
             </div>
-            <StatusBadge tone={isLoyal ? 'success' : 'info'}>
-              {isLoyal ? 'Hội viên thân thiết' : (activeSubscription?.status || memberPlan.status)}
+            <StatusBadge tone={isLoyal ? 'success' : (activeSubscription ? 'info' : 'warning')}>
+              {isLoyal ? 'Hội viên thân thiết' : (subscriptionStatusLabels[activeSubscription?.status] || 'Chưa kích hoạt')}
             </StatusBadge>
           </div>
           <div className="plan-summary">
             <div>
-              <strong>{activeSubscription?.start_date || memberPlan.startedAt}</strong>
+              <strong>{activeSubscription?.start_date || 'Chưa có'}</strong>
               <p>Ngày kích hoạt</p>
             </div>
             <div>
-              <strong>{activeSubscription?.end_date || memberPlan.expiresAt}</strong>
+              <strong>{activeSubscription?.end_date || 'Chưa có'}</strong>
               <p>Ngày hết hạn</p>
             </div>
             <div>
-              <strong>{isLoyal ? '+3 tháng khi gia hạn 1 năm' : memberPlan.sessionsLeft}</strong>
-              <p>{isLoyal ? 'Ưu đãi loyal hiện có' : 'Buổi còn lại'}</p>
+              <strong>{isLoyal ? '+3 tháng khi gia hạn 1 năm' : 'Chưa áp dụng'}</strong>
+              <p>{isLoyal ? 'Ưu đãi loyal hiện có' : 'Ưu đãi loyal'}</p>
             </div>
           </div>
           <div className="perks-list">
-            {memberPlan.perks.map((perk) => (
+            {availablePerks.map((perk) => (
               <div key={perk} className="perk-item">
                 <span><FiCheck /></span>
                 <p>{perk}</p>

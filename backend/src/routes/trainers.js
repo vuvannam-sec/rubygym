@@ -60,7 +60,7 @@ router.get('/:id/clients', authenticate, async (req, res) => {
     }
 
     const [rows] = await pool.execute(`
-      SELECT m.id, u.full_name, u.email, u.phone, m.join_date, m.is_loyal,
+      SELECT m.id, u.full_name, u.email, u.phone, m.join_date, m.current_weight, m.height_cm, m.is_loyal,
              tg.goal_type, tg.target_weight, tg.target_bmi, tg.target_date, tg.notes AS goal_notes
       FROM members m
       JOIN users u ON m.user_id = u.id

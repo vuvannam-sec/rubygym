@@ -1,6 +1,6 @@
 # Security Pipeline Analysis
 
-Date: 2026-05-27
+Date: 2026-05-27 (updated 2026-06-09: quality gate per ADR-004)
 
 ## Overview
 
@@ -14,7 +14,7 @@ Workflow triggers:
 Permissions:
 - `contents: read` only.
 
-The workflow avoids unsupported claims. It produces artifacts for scanner output and keeps warnings visible for triage. After the first successful GitHub-hosted run, the workflow actions were upgraded to current stable major versions to address GitHub's Node.js 20 action-runtime deprecation warnings.
+The workflow avoids unsupported claims. It produces artifacts for scanner output and keeps warnings visible for triage.
 
 ## Job Analysis
 
@@ -23,32 +23,39 @@ The workflow avoids unsupported claims. It produces artifacts for scanner output
 | `backend-test` | Push, PR, manual | Verify backend install and route tests | `npm ci`, `npm test` in `backend` | Jest pass/fail | Prevents auth/RBAC/domain regressions before deployment | Locally passed: 6 suites, 25 tests | Tests mock DB; not full integration coverage |
 | `frontend-test-build` | Push, PR, manual | Verify frontend install, test, and production bundle | `npm ci`, `CI=true npm test -- --watchAll=false`, `npm run build` in `frontend` | React test result and build artifact | Catches frontend route/render/build regressions | Locally passed: 1 suite, 1 test, build passed | CRA dependency audit debt remains |
 | `docker-build` | After backend/frontend jobs | Validate deployment configuration and build images | `docker compose config`, `docker compose build` | Valid compose file and built images | Catches broken Dockerfiles, Compose syntax, and build-time dependency issues | Locally passed | Does not publish images |
-| `semgrep-sast` | Push, PR, manual | Static application security testing | Dockerized `semgrep scan --config p/ci ...` | `docs/reports/semgrep-results.json` artifact | Finds insecure code patterns before runtime | Locally ran, 1 finding in vulnerable demo | Community rules are not exhaustive; generated docs are excluded |
-| `trivy-image-scan` | After `docker-build` | Container/image vulnerability scan | Build images, then Dockerized Trivy scans for backend and frontend | `trivy-rubygym-backend.json`, `trivy-rubygym-frontend.json` artifacts | Detects OS and language package CVEs in container images | Locally ran. Backend: 2 medium. Frontend: 0 | Uses Docker image and remote DB; result changes as CVE DB changes |
-| `zap-baseline-dast` | After `docker-build` | Dynamic baseline scan of running frontend | `docker compose up -d --build`, curl wait loop, Dockerized `zap-baseline.py` | `zap-baseline.html`, `zap-baseline.json`, `zap-baseline.md`, `zap-exit-code.txt` | Detects missing browser security headers and passive web issues | Locally ran. 0 failures, 2 warnings | Baseline scan is passive/lightweight and unauthenticated |
+| `semgrep-sast` | Push, PR, manual | Static application security testing (quality gate) | Dockerized `semgrep scan --config p/ci --error` excluding `vulnerable-demo.js` | `docs/reports/semgrep-results.json` artifact | Fails the build on findings in real application code | Gate enabled (ADR-004) | Community rules are not exhaustive; generated docs excluded |
+| `semgrep-detection-demo` | Push, PR, manual | Prove SAST detects planted vulnerabilities (non-blocking) | Dockerized `semgrep scan` over `backend/src/routes/vulnerable-demo.js` with `continue-on-error` | `docs/reports/semgrep-vulnerable-demo.json` artifact | Demonstrates detection of SQLi/XSS/eval/secret/path-traversal | Non-blocking by design | File is not mounted; informational only |
+| `docker-build` | After backend/frontend jobs | Validate deployment configuration and build images | `docker compose config`, `docker compose build` | Valid compose file and built images | Catches broken Dockerfiles, Compose syntax, and build-time dependency issues | Locally passed | Does not publish images |
+| `trivy-image-scan` | After `docker-build` | Container/image vulnerability scan (report + gate) | Build images, full JSON report (exit 0), then gate `--severity CRITICAL,HIGH --ignore-unfixed --exit-code 1` | `trivy-rubygym-backend.json`, `trivy-rubygym-frontend.json` artifacts | Detects OS/language CVEs; fails on fixable Critical/High | Gate enabled (ADR-004) | `--ignore-unfixed` avoids red on unfixable base-image CVEs |
+| `zap-baseline-dast` | After `docker-build` | Dynamic baseline scan of running frontend | `docker compose up -d --build`, curl wait loop, Dockerized `zap-baseline.py` | `zap-baseline.html`, `zap-baseline.json`, `zap-baseline.md`, `zap-exit-code.txt` | Detects missing browser security headers and passive web issues | Non-blocking (informational) | Baseline scan is passive/lightweight and unauthenticated |
 
 ## Semgrep SAST Details
 
-Local command:
+Gate command (fails on findings in real application code):
 
 ```bash
 docker run --rm -v "$PWD:/src" -w /src semgrep/semgrep:latest \
-  semgrep scan --metrics=off --config p/ci \
+  semgrep scan --metrics=off --config p/ci --error \
   --exclude backend/node_modules --exclude frontend/node_modules --exclude frontend/build \
   --exclude docs/reports --exclude docs/slides \
+  --exclude backend/src/routes/vulnerable-demo.js \
   --json --output docs/reports/semgrep-results.json .
 ```
 
-Actual result:
-- Scan completed successfully.
-- Scanned 118 files.
-- Final finding count: 1.
-- Finding is in the intentionally vulnerable demo: request-controlled expression reaches `eval` in `backend/src/routes/vulnerable-demo.js`.
+Detection demo command (non-blocking, proves detection):
 
-Triage guidance:
-- This finding is accepted only because the file is an educational demo and is not mounted in `backend/src/index.js`.
-- If the vulnerable route is ever mounted in production, the finding becomes high priority and must block release.
-- Use `backend/src/routes/vulnerable-demo-fixed.js` as the secure comparison.
+```bash
+docker run --rm -v "$PWD:/src" -w /src semgrep/semgrep:latest \
+  semgrep scan --metrics=off --config p/ci --config "p/owasp-top-ten" \
+  --json --output docs/reports/semgrep-vulnerable-demo.json \
+  backend/src/routes/vulnerable-demo.js
+```
+
+Policy (ADR-004 / NFR-SEC-07):
+- The gate excludes `vulnerable-demo.js` and fails the build on any finding in the rest of the codebase.
+- The detection-demo job scans `vulnerable-demo.js` with `continue-on-error: true`; its finding count is expected to be greater than zero and is the evidence that SAST detection works.
+- `backend/src/routes/vulnerable-demo-fixed.js` is the secure comparison version.
+- The vulnerable router is not mounted in `backend/src/index.js`, so it never reaches the running application.
 
 ## Trivy Container Scan Details
 
@@ -125,7 +132,7 @@ This is not required for Goal 2 because the reports in `docs/reports` already pr
 
 | Limitation | Impact | Recommended improvement |
 |---|---|---|
-| Future GitHub Actions runtime changes can affect third-party actions | A workflow that passed before may later show deprecation warnings or require action upgrades | Keep actions on supported stable major versions and monitor every final submission run |
+| No GitHub Actions run was executed inside this local environment | Workflow syntax was parsed locally, but CI runtime was not observed | Push to GitHub and run `workflow_dispatch` |
 | ZAP scan is unauthenticated | Does not test protected admin/trainer/member workflows | Add seeded login flow and authenticated ZAP context |
 | Semgrep uses community rules | May miss business-logic vulnerabilities | Add custom rules for Express route security and secrets |
 | Trivy CVE DB changes over time | Results may differ in later runs | Keep JSON artifacts per submission/run |

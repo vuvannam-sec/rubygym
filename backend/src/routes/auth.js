@@ -26,6 +26,22 @@ const parseReferralCode = (referralCode) => {
   return matched ? Number(matched[1]) : null;
 };
 
+const calculateBmi = (weight, heightCm) => {
+  const numericWeight = Number(weight);
+  const numericHeight = Number(heightCm);
+
+  if (!numericWeight || !numericHeight) {
+    return null;
+  }
+
+  const heightInMeters = numericHeight / 100;
+  if (!heightInMeters) {
+    return null;
+  }
+
+  return Number((numericWeight / (heightInMeters * heightInMeters)).toFixed(2));
+};
+
 const loadUserContext = async (user) => {
   const contextUser = {
     id: user.id,
@@ -41,7 +57,7 @@ const loadUserContext = async (user) => {
 
   if (user.role === 'MEMBER') {
     const [memberRows] = await pool.execute(`
-      SELECT m.id, m.trainer_id, m.join_date, m.is_loyal, m.pending_bonus_months,
+      SELECT m.id, m.trainer_id, m.join_date, m.current_weight, m.height_cm, m.is_loyal, m.pending_bonus_months,
              u.full_name AS trainer_name, u.email AS trainer_email, u.phone AS trainer_phone
       FROM members m
       LEFT JOIN trainers t ON m.trainer_id = t.id
@@ -53,12 +69,34 @@ const loadUserContext = async (user) => {
       contextUser.member_id = memberRows[0].id;
       contextUser.trainer_id = memberRows[0].trainer_id;
       contextUser.join_date = memberRows[0].join_date;
+      contextUser.current_weight = memberRows[0].current_weight !== null && memberRows[0].current_weight !== undefined
+        ? Number(memberRows[0].current_weight)
+        : null;
+      contextUser.height_cm = memberRows[0].height_cm !== null && memberRows[0].height_cm !== undefined
+        ? Number(memberRows[0].height_cm)
+        : null;
+      contextUser.current_bmi = calculateBmi(memberRows[0].current_weight, memberRows[0].height_cm);
       contextUser.is_loyal = Boolean(memberRows[0].is_loyal);
       contextUser.trainer_name = memberRows[0].trainer_name;
       contextUser.trainer_email = memberRows[0].trainer_email;
       contextUser.trainer_phone = memberRows[0].trainer_phone;
       contextUser.referral_code = `RUBY-${memberRows[0].id}`;
       contextUser.pending_bonus_months = memberRows[0].pending_bonus_months || 0;
+
+      const [subscriptionRows] = await pool.execute(
+        'SELECT id FROM subscriptions WHERE member_id = ? LIMIT 1',
+        [memberRows[0].id]
+      );
+      const [goalRows] = await pool.execute(
+        'SELECT id FROM training_goals WHERE member_id = ? LIMIT 1',
+        [memberRows[0].id]
+      );
+      contextUser.onboarding_completed = Boolean(
+        contextUser.current_weight !== null &&
+        contextUser.height_cm !== null &&
+        subscriptionRows.length > 0 &&
+        goalRows.length > 0
+      );
     }
   }
 
@@ -103,13 +141,36 @@ router.post('/register', async (req, res) => {
       password,
       full_name,
       phone,
+      current_weight,
+      height_cm,
       trainer_id,
       referral_code,
       join_date
     } = req.body;
 
-    if (!email || !password || !full_name || !phone) {
+    const hasCurrentWeight = current_weight !== undefined && current_weight !== null && current_weight !== '';
+    const hasHeight = height_cm !== undefined && height_cm !== null && height_cm !== '';
+    const parsedCurrentWeight = Number(current_weight);
+    const parsedHeightCm = Number(height_cm);
+
+    if (!email || !password || !full_name || !phone || !hasCurrentWeight || !hasHeight) {
       return res.status(400).json({ error: 'Missing required registration fields' });
+    }
+
+    if (Number.isNaN(parsedCurrentWeight)) {
+      return res.status(400).json({ error: 'Current weight must be a number' });
+    }
+
+    if (Number.isNaN(parsedHeightCm)) {
+      return res.status(400).json({ error: 'Height must be a number' });
+    }
+
+    if (parsedCurrentWeight < 20 || parsedCurrentWeight > 350) {
+      return res.status(400).json({ error: 'Current weight must be between 20 and 350 kg' });
+    }
+
+    if (parsedHeightCm < 100 || parsedHeightCm > 250) {
+      return res.status(400).json({ error: 'Height must be between 100 and 250 cm' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -136,8 +197,8 @@ router.post('/register', async (req, res) => {
     );
 
     const [memberResult] = await pool.execute(
-      'INSERT INTO members (user_id, trainer_id, join_date, is_loyal, referred_by) VALUES (?, ?, ?, ?, ?)',
-      [result.insertId, trainerId, join_date || new Date().toISOString().split('T')[0], 0, referrerMemberId]
+      'INSERT INTO members (user_id, trainer_id, join_date, current_weight, height_cm, is_loyal, referred_by) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [result.insertId, trainerId, join_date || new Date().toISOString().split('T')[0], parsedCurrentWeight, parsedHeightCm, 0, referrerMemberId]
     );
 
     await grantReferralBonus(referrerMemberId);
@@ -146,8 +207,12 @@ router.post('/register', async (req, res) => {
       message: 'User registered',
       userId: result.insertId,
       memberId: memberResult.insertId,
+      current_weight: parsedCurrentWeight,
+      height_cm: parsedHeightCm,
+      current_bmi: calculateBmi(parsedCurrentWeight, parsedHeightCm),
       referral_applied: Boolean(referrerMemberId),
-      trainer_assigned: Boolean(trainerId)
+      trainer_assigned: Boolean(trainerId),
+      onboarding_completed: false
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

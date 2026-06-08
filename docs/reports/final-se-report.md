@@ -140,3 +140,17 @@ Kết quả traceability cuối: 21 yêu cầu Implemented, 1 yêu cầu Partial
 ## 20. Kết luận
 
 RubyGYM hiện đáp ứng phần lớn yêu cầu nghiệp vụ ban đầu và đủ demo cuối kỳ. Hệ thống có backend rule enforcement rõ ràng, frontend role-based, database phản ánh nghiệp vụ chính, tài liệu use case/schema/traceability/test evidence đầy đủ và không claim các tính năng ngoài phạm vi như online payment hoặc Member self-registration vào buổi tập.
+
+
+
+## Refactor changelog — 2026-06
+
+This iteration removed ambiguity and aligned code with documentation. Decisions are recorded in `architecture-decisions.md` (ADR-001..006).
+
+- **Training goal ownership (ADR-001):** the member owns and edits the goal as the single source of truth via `GET/PUT /api/goals/me`; trainers/admins read it but cannot modify it. Resolved the contradiction where the old SRS said the trainer set goals.
+- **Onboarding scope (ADR-002):** onboarding now collects body metrics + package + trainer only. The duplicate "training goal" input was removed from `MemberOnboarding.js` and from `PUT /members/me/onboarding`; the goal is set on the Goals page. Backend test asserts onboarding no longer writes `training_goals`.
+- **Monthly comment cycle (ADR-003):** "comment after each session" is delivered as the monthly evaluation cycle.
+- **UI redesign (ADR-005):** introduced CSS design tokens (`styles/tokens.css`) with a ruby-on-dark gym theme; rebuilt the public site (hero, classes, membership pricing 3/6/12 months, trainers, facilities, events, testimonials, contact). Operational dashboards (admin/trainer/member) are now data-driven with empty/loading/error states instead of mock data.
+- **Project 12 / Project 2 separation (ADR-006):** SRS labels functional requirements (P12) and the security pipeline (P2) separately.
+- **Security quality gate (ADR-004):** Semgrep and Trivy fail the pipeline on Critical/High findings in the real code; the intentional `vulnerable-demo.js` is excluded from the gate and scanned in a separate non-blocking "detection demo" job; ZAP baseline is informational.
+- **Verification:** backend 8 suites / 32 tests pass; frontend 2 suites pass; `npm run build` compiles; `docker compose config` valid.

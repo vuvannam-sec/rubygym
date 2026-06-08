@@ -8,7 +8,7 @@ import MediaAsset from '../Layout/MediaAsset';
 import { ActionIconButton, EmptyState, Modal, Pagination, SearchField, SectionHeader, StatusBadge, Toast } from '../Layout/ProductUI';
 
 function MemberList() {
-  const [members, setMembers] = useState(initialMembers);
+  const [members, setMembers] = useState([]);
   const [trainers, setTrainers] = useState([]);
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -22,6 +22,8 @@ function MemberList() {
     email: '',
     password: '',
     phone: '',
+    currentWeight: '',
+    heightCm: '',
     is_loyal: false,
     trainer: '',
     trainer_id: '',
@@ -38,6 +40,8 @@ function MemberList() {
       name: member.full_name,
       email: member.email || '',
       phone: member.phone || '',
+      currentWeight: member.current_weight ?? '',
+      heightCm: member.height_cm ?? '',
       plan: member.is_loyal ? 'Hội viên thân thiết' : 'Hội viên thường',
       is_loyal: Boolean(member.is_loyal),
       trainer: member.trainer_name || 'Chưa phân công',
@@ -67,9 +71,10 @@ function MemberList() {
       try {
         await loadAdminData();
       } catch (error) {
+        setMembers([]);
         setToast({
           type: 'info',
-          title: 'Đang hiển thị dữ liệu mẫu',
+          title: 'Chưa tải được danh sách hội viên',
           message: normalizeApiError(error, 'Không tải được danh sách hội viên từ backend.')
         });
       }
@@ -95,6 +100,8 @@ function MemberList() {
       email: '',
       password: '',
       phone: '',
+      currentWeight: '',
+      heightCm: '',
       is_loyal: false,
       trainer: '',
       trainer_id: '',
@@ -118,6 +125,8 @@ function MemberList() {
       email: member.email || '',
       password: '',
       phone: member.phone || '',
+      currentWeight: member.currentWeight ?? '',
+      heightCm: member.heightCm ?? '',
       is_loyal: Boolean(member.is_loyal),
       trainer: member.trainer,
       trainer_id: member.trainer_id || '',
@@ -146,6 +155,8 @@ function MemberList() {
           full_name: formData.name,
           email: formData.email,
           phone: formData.phone,
+          current_weight: formData.currentWeight === '' ? null : Number(formData.currentWeight),
+          height_cm: formData.heightCm === '' ? null : Number(formData.heightCm),
           trainer_id: formData.trainer_id || null,
           join_date: formData.joinDate,
           is_loyal: formData.is_loyal
@@ -158,6 +169,8 @@ function MemberList() {
           email: formData.email,
           password: formData.password,
           phone: formData.phone,
+          current_weight: formData.currentWeight === '' ? null : Number(formData.currentWeight),
+          height_cm: formData.heightCm === '' ? null : Number(formData.heightCm),
           trainer_id: formData.trainer_id || null,
           join_date: formData.joinDate,
           is_loyal: formData.is_loyal
@@ -333,6 +346,14 @@ function MemberList() {
               <strong>{viewingMember.phone || 'Chưa cập nhật'}</strong>
             </div>
             <div>
+              <span>Cân nặng hiện tại</span>
+              <strong>{viewingMember.currentWeight ? `${viewingMember.currentWeight} kg` : 'Chưa cập nhật'}</strong>
+            </div>
+            <div>
+              <span>Chiều cao</span>
+              <strong>{viewingMember.heightCm ? `${viewingMember.heightCm} cm` : 'Chưa cập nhật'}</strong>
+            </div>
+            <div>
               <span>Huấn luyện viên</span>
               <strong>{viewingMember.trainer}</strong>
             </div>
@@ -368,6 +389,28 @@ function MemberList() {
             <label>
               Số điện thoại
               <input value={formData.phone} onChange={(event) => setFormData((current) => ({ ...current, phone: event.target.value }))} />
+            </label>
+            <label>
+              Cân nặng hiện tại (kg)
+              <input
+                type="number"
+                min="20"
+                max="350"
+                step="0.1"
+                value={formData.currentWeight}
+                onChange={(event) => setFormData((current) => ({ ...current, currentWeight: event.target.value }))}
+              />
+            </label>
+            <label>
+              Chiều cao (cm)
+              <input
+                type="number"
+                min="100"
+                max="250"
+                step="0.1"
+                value={formData.heightCm}
+                onChange={(event) => setFormData((current) => ({ ...current, heightCm: event.target.value }))}
+              />
             </label>
             <label>
               Huấn luyện viên

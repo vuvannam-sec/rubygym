@@ -1,15 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FiCheck, FiSave } from 'react-icons/fi';
-import { trainerEvaluationRows, trainerMembers } from '../../data/mockData';
+import { FiCheck, FiClipboard, FiSave } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
-import { SectionHeader, Toast } from '../Layout/ProductUI';
+import { EmptyState, SectionHeader, Toast } from '../Layout/ProductUI';
 import api from '../../services/api';
 import { normalizeApiError } from '../../services/fallbacks';
 
 function EvaluationForm() {
   const { user } = useAuth();
   const [formData, setFormData] = useState({
-    member_id: String(trainerMembers[0].id),
+    member_id: '',
     month_year: '',
     target_weight: '',
     actual_weight: '',
@@ -19,8 +18,8 @@ function EvaluationForm() {
   });
   const [message, setMessage] = useState('');
   const [toast, setToast] = useState(null);
-  const [rows, setRows] = useState(trainerEvaluationRows);
-  const [members, setMembers] = useState(trainerMembers);
+  const [rows, setRows] = useState([]);
+  const [members, setMembers] = useState([]);
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -121,18 +120,7 @@ function EvaluationForm() {
       setMessage('Đánh giá đã được lưu thành công.');
       setToast({ type: 'success', title: 'Đã lưu đánh giá', message: 'Biểu mẫu đánh giá tháng đã được cập nhật.' });
     } catch (error) {
-      const nextRow = {
-        id: Date.now(),
-        member: selectedMember?.name || 'Học viên',
-        month: formData.month_year,
-        weight: formData.actual_weight ? `${formData.actual_weight}kg` : 'Chưa cập nhật',
-        bmi: formData.actual_bmi || 'Chưa cập nhật',
-        note: formData.notes || 'Đã lưu đánh giá mới'
-      };
-
-      setRows((current) => [nextRow, ...current]);
-      setMessage('Đánh giá đã được lưu cục bộ.');
-      setToast({ type: 'info', title: 'Đang dùng dữ liệu cục bộ', message: normalizeApiError(error, 'Backend chưa sẵn sàng nên đánh giá được lưu tạm trong giao diện.') });
+      setToast({ type: 'error', title: 'Không lưu được đánh giá', message: normalizeApiError(error, 'Vui lòng kiểm tra backend và thử lại.') });
     }
   };
 
@@ -169,6 +157,13 @@ function EvaluationForm() {
           {selectedGoal.goal_notes ? <p>{selectedGoal.goal_notes}</p> : null}
         </article>
       ) : null}
+      {members.length === 0 ? (
+        <EmptyState
+          icon={<FiClipboard />}
+          title="Chưa có học viên để đánh giá"
+          description="Bạn cần được phân công học viên trước khi tạo đánh giá tháng. Liên hệ quản trị viên nếu danh sách trống."
+        />
+      ) : (
       <form className="form-grid" onSubmit={handleSubmit}>
         <label>
           Học viên
@@ -210,7 +205,9 @@ function EvaluationForm() {
           Lưu đánh giá
         </button>
       </form>
+      )}
 
+      {rows.length ? (
       <div className="table-wrapper">
         <table>
           <thead>
@@ -235,6 +232,7 @@ function EvaluationForm() {
           </tbody>
         </table>
       </div>
+      ) : null}
     </section>
   );
 }

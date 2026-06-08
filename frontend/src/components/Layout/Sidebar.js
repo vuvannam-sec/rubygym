@@ -34,6 +34,7 @@ const roleLinks = {
   ],
   MEMBER: [
     { to: '/member', label: 'Tổng quan', icon: <FiHome /> },
+    { to: '/member/onboarding', label: 'Hồ sơ ban đầu', icon: <FiClipboard /> },
     { to: '/member/schedule', label: 'Lịch tập của tôi', icon: <FiCalendar /> },
     { to: '/member/goals', label: 'Mục tiêu', icon: <FiTarget /> },
     { to: '/member/results', label: 'Kết quả đánh giá', icon: <FiBarChart2 /> },
@@ -46,14 +47,14 @@ function Sidebar() {
   const { user } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const links = roleLinks[user?.role] || [];
-  const title = user?.role === 'ADMIN' ? 'Admin Workspace' : user?.role === 'TRAINER' ? 'Trainer Workspace' : 'Member Workspace';
+  const title = user?.role === 'ADMIN' ? 'Khu quản trị' : user?.role === 'TRAINER' ? 'Khu huấn luyện viên' : 'Khu hội viên';
 
   return (
     <aside className={`sidebar sidebar-product ${collapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-top">
         <div className="sidebar-brand-block">
-          <BrandLogo to="/" light subtitle="Workspace" />
-          <p className="sidebar-eyebrow">Workspace</p>
+          <BrandLogo to="/" light subtitle="Trung tâm thể hình" />
+          <p className="sidebar-eyebrow">RubyGYM</p>
           <h2>{title}</h2>
         </div>
         <button type="button" className="icon-button sidebar-toggle" onClick={() => setCollapsed((current) => !current)}>

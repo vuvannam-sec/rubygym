@@ -36,6 +36,28 @@ Status values: Implemented, Partial, Missing, Future.
 | Missing | 0 | None |
 | Future | 0 | Future items are outside original requirements. |
 
+## Test Coverage (SRS FR/NFR → automated tests)
+
+Backend: Jest + Supertest (DB mocked) — 8 suites / 32 tests. Frontend: React Testing Library — 2 suites.
+
+| Requirement (SRS) | Automated test | Type |
+|---|---|---|
+| FR-AUTH-01..05 (register, login, JWT, RBAC, bcrypt) | `backend/tests/auth.test.js` | Backend |
+| FR-TRN-01..04 (trainer CRUD, assigned clients) | `backend/tests/trainers.test.js` | Backend |
+| FR-SCH-01..07 (session rules: ≤2h, hours, lunch, ≤8h/day, ≤3 members, empty list) | `backend/tests/schedule.test.js` | Backend |
+| FR-GOAL-01/02 (member sets own goal; non-owner rejected; trainer read) | `backend/tests/goals.test.js` | Backend |
+| FR-EVL-01..06 (trainer-only create, ownership, duplicate-month, goal target) | `backend/tests/evaluations.test.js` | Backend |
+| FR-MEM-01..05, FR-SUB (plan, loyalty, referral bonus) | `backend/tests/subscription.test.js` | Backend |
+| FR-MEM-06 (onboarding = metrics+plan+trainer, NO goal — ADR-002) | `backend/tests/onboarding.test.js` | Backend |
+| NFR-OPS (health endpoint) | `backend/tests/health.test.js` | Backend |
+| FR-EVT-02 + landing (public page, pricing, classes) | `frontend/src/App.test.js` | Frontend |
+| ADR-002 (onboarding has no goal input) | `frontend/src/components/Members/MemberOnboarding.test.js` | Frontend |
+
+Notes:
+- `schedule.test.js` `today()` uses local date parts to avoid a UTC/+07:00 timezone-boundary flake.
+- `onboarding.test.js` asserts onboarding does **not** write `training_goals` (ADR-002).
+- `evaluations.test.js` asserts a member cannot create evaluations and a trainer cannot evaluate non-assigned members.
+
 ## Wording rules for presentation
 
 - Say: Trainer creates sessions for assigned Members.

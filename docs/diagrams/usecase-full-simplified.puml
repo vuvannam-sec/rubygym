@@ -42,6 +42,7 @@ rectangle "RubyGYM System" {
   }
 
   package "Member Features" {
+    usecase "Complete\nOnboarding" as UC_CompleteOnboarding
     usecase "Set/Update\nTraining Goals" as UC_SetGoals
     usecase "View Personal Schedule" as UC_ViewPersonalSchedule
     usecase "Register/Renew\nSubscription Plan" as UC_RegisterRenewSubscription
@@ -74,6 +75,7 @@ Guest -- UC_PublicInfo
 Guest -- UC_RegisterAccount
 
 Member -- UC_Login
+Member -- UC_CompleteOnboarding
 Member -- UC_SetGoals
 Member -- UC_ViewPersonalSchedule
 Member -- UC_RegisterRenewSubscription

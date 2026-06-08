@@ -201,7 +201,7 @@ Limitations:
 ## Slide 15 - Future Work
 
 Recommended next steps:
-- Monitor GitHub Actions after each final submission push.
+- Run the GitHub Actions workflow in GitHub.
 - Migrate frontend from CRA / `react-scripts` to maintained tooling.
 - Add request validation middleware.
 - Add centralized backend error handling.

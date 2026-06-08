@@ -41,6 +41,8 @@ entity "members" as members {
   user_id <<FK, UNIQUE>>
   trainer_id <<FK>>
   join_date
+  current_weight
+  height_cm
   is_loyal
   pending_bonus_months
   referred_by <<FK>>

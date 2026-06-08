@@ -1,0 +1,21 @@
+@startuml Login_Sequence
+actor User
+participant "Frontend\n(React)" as FE
+participant "Backend\n(Express)" as BE
+database "MySQL" as DB
+
+User -> FE: Enter email & password
+FE -> BE: POST /api/auth/login\n{email, password}
+BE -> DB: SELECT * FROM users\nWHERE email = ?
+DB --> BE: User record
+BE -> BE: bcrypt.compare(password, hash)
+alt Valid credentials
+  BE -> BE: jwt.sign({id, email, role})
+  BE --> FE: 200 {token, user}
+  FE -> FE: Store token in localStorage
+  FE --> User: Redirect to dashboard
+else Invalid credentials
+  BE --> FE: 401 {error: "Invalid credentials"}
+  FE --> User: Show error message
+end
+@enduml

@@ -16,6 +16,7 @@ import { EmptyState } from './components/Layout/ProductUI';
 import Sidebar from './components/Layout/Sidebar';
 import LandingPage from './components/Landing/LandingPage';
 import MemberList from './components/Members/MemberList';
+import MemberOnboarding from './components/Members/MemberOnboarding';
 import MyMembersPage from './components/Members/MyMembersPage';
 import ReferralPage from './components/Members/ReferralPage';
 import TrainingGoals from './components/Members/TrainingGoals';
@@ -73,6 +74,10 @@ function RedirectToRoleHome() {
 
   if (user?.role === 'TRAINER') {
     return <Navigate to="/trainer" replace />;
+  }
+
+  if (user?.onboarding_completed === false) {
+    return <Navigate to="/member/onboarding" replace />;
   }
 
   return <Navigate to="/member" replace />;
@@ -135,6 +140,7 @@ function App() {
         <Route element={<ProtectedRoute allowedRoles={['MEMBER']} />}>
           <Route element={<DashboardLayout />}>
             <Route path="/member" element={<MemberDashboard />} />
+            <Route path="/member/onboarding" element={<MemberOnboarding />} />
             <Route path="/member/schedule" element={<ScheduleView variant="member" />} />
             <Route path="/member/goals" element={<TrainingGoals />} />
             <Route path="/member/results" element={<EvaluationList />} />

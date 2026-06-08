@@ -1,0 +1,54 @@
+@startuml RubyGYM_UseCase
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Guest" as guest
+actor "Member" as member
+actor "Trainer" as trainer
+actor "Admin" as admin
+
+rectangle "RubyGYM System" {
+  usecase "View Gym Info & Events" as UC01
+  usecase "Register Account" as UC02
+  usecase "Login" as UC03
+  usecase "View Training Schedule" as UC04
+  usecase "View Monthly Evaluation" as UC05
+  usecase "Choose Trainer" as UC06
+  usecase "Register Subscription Plan" as UC07
+  usecase "Refer a Friend" as UC08
+  usecase "Manage Client List" as UC09
+  usecase "Create Training Session" as UC10
+  usecase "Set Training Goals" as UC11
+  usecase "Perform Monthly Evaluation" as UC12
+  usecase "Manage Trainers" as UC13
+  usecase "Manage Membership Plans" as UC14
+  usecase "Create Events" as UC15
+  usecase "View Dashboard & Statistics" as UC16
+  usecase "Manage Promotions" as UC17
+}
+
+guest --> UC01
+guest --> UC02
+
+member --> UC03
+member --> UC04
+member --> UC05
+member --> UC06
+member --> UC07
+member --> UC08
+member --> UC11
+
+trainer --> UC03
+trainer --> UC09
+trainer --> UC10
+trainer --> UC12
+
+admin --> UC03
+admin --> UC13
+admin --> UC14
+admin --> UC15
+admin --> UC16
+admin --> UC17
+
+member --|> guest
+@enduml

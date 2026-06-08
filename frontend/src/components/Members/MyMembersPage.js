@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { FiUsers } from 'react-icons/fi';
-import { trainerMembers } from '../../data/mockData';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { normalizeApiError } from '../../services/fallbacks';
@@ -10,7 +9,7 @@ import { EmptyState, LoadingPanel, SectionHeader, StatusBadge, Toast } from '../
 
 function MyMembersPage() {
   const { user } = useAuth();
-  const [members, setMembers] = useState(trainerMembers);
+  const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
 
@@ -33,14 +32,15 @@ function MyMembersPage() {
             member.target_date ? `đến ${String(member.target_date).slice(0, 10)}` : null
           ].filter(Boolean).join(' / '),
           nextSession: 'Theo lịch tuần',
-          adherence: member.is_loyal ? '90%' : '85%',
-          gender: member.gender || trainerMembers.find((fallbackMember) => fallbackMember.id === member.id)?.gender || '',
-          avatar_url: member.avatar_url || trainerMembers.find((fallbackMember) => fallbackMember.id === member.id)?.avatar_url || ''
+          adherence: member.is_loyal ? '90%' : 'Chưa đủ dữ liệu',
+          gender: member.gender || '',
+          avatar_url: member.avatar_url || ''
         })));
       } catch (error) {
+        setMembers([]);
         setToast({
           type: 'info',
-          title: 'Đang hiển thị dữ liệu mẫu',
+          title: 'Chưa tải được danh sách học viên',
           message: normalizeApiError(error, 'Không tải được danh sách học viên từ backend.')
         });
       } finally {

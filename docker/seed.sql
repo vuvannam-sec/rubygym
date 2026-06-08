@@ -29,17 +29,17 @@ INSERT INTO trainers (id, user_id, specialization, max_daily_hours) VALUES
 (2, 3, 'Weight Loss Coaching', 8),
 (3, 4, 'Yoga and Mobility', 8);
 
-INSERT INTO members (id, user_id, trainer_id, join_date, is_loyal, pending_bonus_months, referred_by) VALUES
-(1, 5, 1, '2024-01-10', 1, 0, NULL),
-(2, 6, 1, '2024-06-02', 0, 0, 1),
-(3, 7, 1, '2025-01-20', 0, 0, NULL),
-(4, 8, 2, '2023-03-15', 1, 0, NULL),
-(5, 9, 2, '2024-07-05', 0, 1, 4),
-(6, 10, 2, '2025-02-11', 0, 0, NULL),
-(7, 11, 3, '2024-04-01', 1, 0, NULL),
-(8, 12, 3, '2024-09-12', 0, 0, 7),
-(9, 13, 3, '2025-01-08', 0, 0, NULL),
-(10, 14, 1, '2025-03-10', 0, 0, 2);
+INSERT INTO members (id, user_id, trainer_id, join_date, current_weight, height_cm, is_loyal, pending_bonus_months, referred_by) VALUES
+(1, 5, 1, '2024-01-10', 68.50, 172.00, 1, 0, NULL),
+(2, 6, 1, '2024-06-02', 64.20, 168.00, 0, 0, 1),
+(3, 7, 1, '2025-01-20', 71.40, 175.00, 0, 0, NULL),
+(4, 8, 2, '2023-03-15', 57.30, 162.00, 1, 0, NULL),
+(5, 9, 2, '2024-07-05', 59.20, 160.00, 0, 1, 4),
+(6, 10, 2, '2025-02-11', 63.80, 170.00, 0, 0, NULL),
+(7, 11, 3, '2024-04-01', 72.10, 178.00, 1, 0, NULL),
+(8, 12, 3, '2024-09-12', 50.10, 158.00, 0, 0, 7),
+(9, 13, 3, '2025-01-08', 68.30, 173.00, 0, 0, NULL),
+(10, 14, 1, '2025-03-10', 61.50, 165.00, 0, 0, 2);
 
 INSERT INTO training_goals (id, member_id, goal_type, target_weight, target_bmi, target_date, notes) VALUES
 (1, 1, 'Strength maintenance', 68.00, 22.50, '2026-06-30', 'Duy tri suc manh than duoi va 2 buoi cardio moi tuan.'),

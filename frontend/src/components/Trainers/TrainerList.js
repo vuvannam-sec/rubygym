@@ -17,7 +17,7 @@ const defaultForm = {
 };
 
 function TrainerList() {
-  const [trainers, setTrainers] = useState(initialTrainers);
+  const [trainers, setTrainers] = useState([]);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('Tất cả');
   const [page, setPage] = useState(1);
@@ -60,9 +60,10 @@ function TrainerList() {
       try {
         await loadTrainers();
       } catch (error) {
+        setTrainers([]);
         setToast({
           type: 'info',
-          title: 'Đang hiển thị dữ liệu mẫu',
+          title: 'Chưa tải được danh sách huấn luyện viên',
           message: normalizeApiError(error, 'Không tải được danh sách huấn luyện viên từ backend.')
         });
       }

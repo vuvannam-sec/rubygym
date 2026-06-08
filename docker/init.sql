@@ -27,6 +27,8 @@ CREATE TABLE members (
     user_id INT NOT NULL UNIQUE,
     trainer_id INT,
     join_date DATE NOT NULL,
+    current_weight DECIMAL(5,2),
+    height_cm DECIMAL(5,2),
     is_loyal BOOLEAN DEFAULT FALSE,
     pending_bonus_months INT DEFAULT 0,
     referred_by INT,

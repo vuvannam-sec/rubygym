@@ -1,0 +1,24 @@
+@startuml Registration_Activity
+start
+:Guest visits RubyGYM website;
+:Click "Register";
+:Fill registration form\n(email, password, name, phone,\ncurrent weight, height);
+:Submit form;
+
+:Backend validates input;
+if (Email already exists?) then (yes)
+  :Return error "Email taken";
+  stop
+else (no)
+  :Hash password with bcrypt;
+  :Insert user into database;
+  :Create incomplete member profile;
+  :Account created successfully;
+  :Redirect to login;
+  :Member logs in;
+  :Complete onboarding\n(package, trainer preference,\nbody metrics);
+  :Set training goal on Goals page\n(member-owned, optional next step);
+  :Open member dashboard;
+  stop
+endif
+@enduml

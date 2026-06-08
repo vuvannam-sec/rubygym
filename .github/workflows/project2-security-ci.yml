@@ -18,10 +18,10 @@ jobs:
         working-directory: backend
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
@@ -41,10 +41,10 @@ jobs:
         working-directory: frontend
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
@@ -65,7 +65,7 @@ jobs:
     needs: [backend-test, frontend-test-build]
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Validate compose file
         run: docker compose config
@@ -74,27 +74,64 @@ jobs:
         run: docker compose build
 
   semgrep-sast:
-    name: Semgrep SAST
+    name: Semgrep SAST (gate on application code)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
-      - name: Run Semgrep community rules
+      # ADR-004: fail the build on findings in REAL application code.
+      # The intentional teaching file vulnerable-demo.js is excluded here and
+      # scanned separately in the non-blocking "SAST detection demo" job.
+      - name: Run Semgrep (fail on findings)
         run: |
           mkdir -p docs/reports
           docker run --rm -v "$PWD:/src" -w /src semgrep/semgrep:latest \
-            semgrep scan --metrics=off --config p/ci \
+            semgrep scan --metrics=off --config p/ci --error \
             --exclude backend/node_modules --exclude frontend/node_modules --exclude frontend/build \
             --exclude docs/reports --exclude docs/slides \
+            --exclude backend/src/routes/vulnerable-demo.js \
             --json --output docs/reports/semgrep-results.json .
 
       - name: Upload Semgrep report
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: semgrep-results
           path: docs/reports/semgrep-results.json
+          if-no-files-found: warn
+
+  semgrep-detection-demo:
+    name: SAST detection demo (vulnerable-demo, non-blocking)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ADR-004: proves the scanner detects planted vulnerabilities
+      # (SQLi, XSS, eval, hardcoded secret, path traversal, insecure random).
+      # Non-blocking: this file is NOT mounted by the running app.
+      - name: Scan intentionally vulnerable demo file
+        continue-on-error: true
+        run: |
+          mkdir -p docs/reports
+          docker run --rm -v "$PWD:/src" -w /src semgrep/semgrep:latest \
+            semgrep scan --metrics=off --config p/ci --config "p/owasp-top-ten" \
+            --json --output docs/reports/semgrep-vulnerable-demo.json \
+            backend/src/routes/vulnerable-demo.js
+
+      - name: Report detected findings (expected > 0)
+        if: always()
+        run: |
+          count=$(jq '.results | length' docs/reports/semgrep-vulnerable-demo.json 2>/dev/null || echo 0)
+          echo "Semgrep detected $count finding(s) in vulnerable-demo.js (proof of detection)."
+
+      - name: Upload detection-demo report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: semgrep-vulnerable-demo
+          path: docs/reports/semgrep-vulnerable-demo.json
           if-no-files-found: warn
 
   trivy-image-scan:
@@ -103,24 +140,36 @@ jobs:
     needs: docker-build
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Build images for scanning
         run: docker compose build
 
-      - name: Scan backend image
+      - name: Scan backend image (full report)
         run: |
           mkdir -p docs/reports
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/docs/reports:/reports" aquasec/trivy:latest \
             image --exit-code 0 --format json --output /reports/trivy-rubygym-backend.json rubygym-backend:latest
 
-      - name: Scan frontend image
+      - name: Scan frontend image (full report)
         run: |
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/docs/reports:/reports" aquasec/trivy:latest \
             image --exit-code 0 --format json --output /reports/trivy-rubygym-frontend.json rubygym-frontend:latest
 
+      # ADR-004 / NFR-SEC-07: fail on fixable CRITICAL/HIGH vulnerabilities.
+      # --ignore-unfixed avoids perpetual red on base-image CVEs without an available fix.
+      - name: Gate backend image on CRITICAL/HIGH
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest \
+            image --exit-code 1 --severity CRITICAL,HIGH --ignore-unfixed rubygym-backend:latest
+
+      - name: Gate frontend image on CRITICAL/HIGH
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest \
+            image --exit-code 1 --severity CRITICAL,HIGH --ignore-unfixed rubygym-frontend:latest
+
       - name: Upload Trivy reports
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: trivy-image-results
@@ -133,7 +182,7 @@ jobs:
     needs: docker-build
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Start application stack
         run: docker compose up -d --build
@@ -165,7 +214,7 @@ jobs:
         run: docker compose down -v
 
       - name: Upload ZAP reports
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: zap-baseline-results

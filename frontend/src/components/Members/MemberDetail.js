@@ -2,6 +2,18 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../../services/api';
 
+const calculateBmi = (weight, heightCm) => {
+  const numericWeight = Number(weight);
+  const numericHeight = Number(heightCm);
+
+  if (!numericWeight || !numericHeight) {
+    return null;
+  }
+
+  const heightInMeters = numericHeight / 100;
+  return Number((numericWeight / (heightInMeters * heightInMeters)).toFixed(2));
+};
+
 function MemberDetail() {
   const { id } = useParams();
   const [member, setMember] = useState(null);
@@ -29,6 +41,9 @@ function MemberDetail() {
           <p><strong>Họ tên:</strong> {member.full_name}</p>
           <p><strong>Email:</strong> {member.email}</p>
           <p><strong>Số điện thoại:</strong> {member.phone}</p>
+          <p><strong>Cân nặng hiện tại:</strong> {member.current_weight ? `${member.current_weight} kg` : 'Chưa cập nhật'}</p>
+          <p><strong>Chiều cao:</strong> {member.height_cm ? `${member.height_cm} cm` : 'Chưa cập nhật'}</p>
+          <p><strong>BMI hiện tại:</strong> {calculateBmi(member.current_weight, member.height_cm) || 'Chưa tính'}</p>
           <p><strong>Ngày tham gia:</strong> {String(member.join_date).slice(0, 10)}</p>
           <p><strong>Hội viên thân thiết:</strong> {member.is_loyal ? 'Có' : 'Không'}</p>
           <p><strong>HLV:</strong> {member.trainer_name || 'Chưa phân công'}</p>

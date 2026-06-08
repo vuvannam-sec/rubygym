@@ -1,11 +1,29 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FiCalendar, FiPlus } from 'react-icons/fi';
-import { memberWeeklySchedule, trainerWeeklySchedule, weeklyDays, weeklySlots } from '../../data/mockData';
+import { weeklyDays } from '../../data/mockData';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { normalizeApiError } from '../../services/fallbacks';
 import CreateSession from './CreateSession';
 import { EmptyState, LoadingPanel, SectionHeader, Toast } from '../Layout/ProductUI';
+
+const BASE_SLOTS = [
+  '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00',
+  '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30'
+];
+
+const timeToMinutes = (value) => {
+  const [hours, minutes] = String(value).split(':').map(Number);
+  return (hours * 60) + minutes;
+};
+
+const createEmptySchedule = (slots) => slots.reduce((schedule, slot) => ({
+  ...schedule,
+  [slot]: weeklyDays.reduce((days, day) => ({
+    ...days,
+    [day]: ''
+  }), {})
+}), {});
 
 function ScheduleView({ variant = 'trainer' }) {
   const { user } = useAuth();
@@ -13,38 +31,44 @@ function ScheduleView({ variant = 'trainer' }) {
   const [toast, setToast] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const loadSchedule = async () => {
-      try {
-        const endpoint = variant === 'trainer'
-          ? `/schedule/trainer/${user?.trainer_id}`
-          : `/schedule/member/${user?.member_id}`;
+  const loadSchedule = useCallback(async () => {
+    setLoading(true);
+    setSessions([]);
 
-        if (!(variant === 'trainer' ? user?.trainer_id : user?.member_id)) {
-          setLoading(false);
-          return;
-        }
+    try {
+      const endpoint = variant === 'trainer'
+        ? `/schedule/trainer/${user?.trainer_id}`
+        : `/schedule/member/${user?.member_id}`;
 
-        const { data } = await api.get(endpoint);
-        setSessions(data);
-      } catch (error) {
-        setToast({
-          type: 'info',
-          title: 'Đang hiển thị dữ liệu mẫu',
-          message: normalizeApiError(error, 'Không tải được lịch tập từ backend.')
-        });
-      } finally {
+      if (!(variant === 'trainer' ? user?.trainer_id : user?.member_id)) {
         setLoading(false);
+        return;
       }
-    };
 
-    loadSchedule();
+      const { data } = await api.get(endpoint);
+      setSessions(data);
+    } catch (error) {
+      setSessions([]);
+      setToast({
+        type: 'info',
+        title: 'Chưa tải được lịch tập',
+        message: normalizeApiError(error, 'Không tải được lịch tập từ backend.')
+      });
+    } finally {
+      setLoading(false);
+    }
   }, [user, variant]);
 
+  useEffect(() => {
+    loadSchedule();
+  }, [loadSchedule]);
+
   const schedule = useMemo(() => {
-    const base = variant === 'trainer'
-      ? JSON.parse(JSON.stringify(trainerWeeklySchedule))
-      : JSON.parse(JSON.stringify(memberWeeklySchedule));
+    const displaySlots = Array.from(new Set([
+      ...BASE_SLOTS,
+      ...sessions.map((session) => String(session.start_time).slice(0, 5))
+    ])).sort((a, b) => timeToMinutes(a) - timeToMinutes(b));
+    const base = createEmptySchedule(displaySlots);
 
     sessions.forEach((session) => {
       const date = new Date(session.session_date);
@@ -58,7 +82,7 @@ function ScheduleView({ variant = 'trainer' }) {
       }
     });
 
-    return base;
+    return { base, slots: displaySlots };
   }, [sessions, user, variant]);
 
   if (loading) {
@@ -84,12 +108,12 @@ function ScheduleView({ variant = 'trainer' }) {
             </tr>
           </thead>
           <tbody>
-            {weeklySlots.map((slot) => (
+            {schedule.slots.map((slot) => (
               <tr key={slot}>
                 <td>{slot}</td>
                 {weeklyDays.map((day) => (
                   <td key={`${slot}-${day}`}>
-                    {schedule[slot][day] ? <div className="calendar-session">{schedule[slot][day]}</div> : <span className="calendar-empty">Trống</span>}
+                    {schedule.base[slot][day] ? <div className="calendar-session">{schedule.base[slot][day]}</div> : <span className="calendar-empty">Trống</span>}
                   </td>
                 ))}
               </tr>
@@ -137,7 +161,7 @@ function ScheduleView({ variant = 'trainer' }) {
         />
       )}
 
-      {variant === 'trainer' ? <CreateSession /> : null}
+      {variant === 'trainer' ? <CreateSession onCreated={loadSchedule} /> : null}
     </section>
   );
 }

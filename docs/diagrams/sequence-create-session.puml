@@ -1,0 +1,26 @@
+@startuml CreateSession_Sequence
+actor Trainer
+participant "Frontend" as FE
+participant "Backend" as BE
+database "MySQL" as DB
+
+Trainer -> FE: Fill session form\n(date, start_time, end_time, members)
+FE -> BE: POST /api/schedule\n{trainer_id, session_date, start_time, end_time}
+BE -> BE: Validate JWT token
+BE -> DB: SELECT SUM(hours)\nWHERE trainer_id AND date
+DB --> BE: total_hours
+
+alt total_hours >= 8
+  BE --> FE: 400 "Trainer reached 8h limit"
+  FE --> Trainer: Show error
+else total_hours < 8
+  BE -> BE: Validate time constraints\n(05:00-11:30, 13:30-20:00)
+  BE -> BE: Validate session <= 2 hours
+  BE -> DB: INSERT INTO training_sessions
+  DB --> BE: session_id
+  BE -> DB: Check session_members count < 3
+  BE -> DB: INSERT INTO session_members
+  BE --> FE: 201 {sessionId}
+  FE --> Trainer: Show success
+end
+@enduml

@@ -1,0 +1,102 @@
+/*
+ * RubyGYM Design Tokens (ADR-005)
+ * Single source of truth for color, typography, spacing, radius and shadow.
+ * Theme: energetic dark surfaces with a ruby/crimson accent — a real gym brand feel.
+ * Every component should consume these variables instead of hard-coded values.
+ */
+:root {
+  /* ===== Brand · Ruby ===== */
+  --rg-ruby-50: #fff0f2;
+  --rg-ruby-100: #ffdce1;
+  --rg-ruby-200: #ffb3bf;
+  --rg-ruby-300: #ff8093;
+  --rg-ruby-400: #fb5066;
+  --rg-ruby-500: #e6314a; /* primary accent */
+  --rg-ruby-600: #c81e3a;
+  --rg-ruby-700: #a3162d;
+  --rg-ruby-800: #7d1023;
+
+  --rg-accent: var(--rg-ruby-500);
+  --rg-accent-2: #ff5f6d; /* gradient partner */
+  --rg-accent-strong: var(--rg-ruby-600);
+  --rg-accent-contrast: #ffffff;
+  --rg-accent-soft: rgba(230, 49, 74, 0.14);
+  --rg-accent-line: rgba(230, 49, 74, 0.30);
+  --rg-accent-glow: rgba(230, 49, 74, 0.45);
+
+  /* ===== Dark surfaces ===== */
+  --rg-bg: #0a0d14;
+  --rg-bg-2: #0e121b;
+  --rg-surface: #141a25;
+  --rg-surface-2: #1a2230;
+  --rg-surface-3: #212b3b;
+  --rg-elevate: #161d2a;
+  --rg-overlay: rgba(6, 9, 15, 0.72);
+
+  /* ===== Lines / borders ===== */
+  --rg-border: rgba(255, 255, 255, 0.08);
+  --rg-border-2: rgba(255, 255, 255, 0.14);
+  --rg-border-strong: rgba(255, 255, 255, 0.22);
+
+  /* ===== Text ===== */
+  --rg-text: #eef2f8;
+  --rg-text-2: #aab6c8; /* muted */
+  --rg-text-3: #76839a; /* dim */
+  --rg-heading: #ffffff;
+  --rg-text-on-dark: #f8fafc;
+
+  /* ===== Feedback ===== */
+  --rg-success: #34d399;
+  --rg-success-bg: rgba(52, 211, 153, 0.13);
+  --rg-success-line: rgba(52, 211, 153, 0.32);
+  --rg-warning: #fbbf24;
+  --rg-warning-bg: rgba(251, 191, 36, 0.13);
+  --rg-warning-line: rgba(251, 191, 36, 0.34);
+  --rg-danger: #fb5066;
+  --rg-danger-bg: rgba(251, 80, 102, 0.13);
+  --rg-danger-line: rgba(251, 80, 102, 0.34);
+  --rg-info: #58a6ff;
+  --rg-info-bg: rgba(88, 166, 255, 0.13);
+  --rg-info-line: rgba(88, 166, 255, 0.34);
+
+  /* ===== Typography ===== */
+  --rg-font: 'Inter', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  --rg-font-display: 'Poppins', 'Inter', 'Segoe UI', sans-serif;
+  --rg-fs-xs: 0.78rem;
+  --rg-fs-sm: 0.9rem;
+  --rg-fs-md: 1rem;
+  --rg-fs-lg: 1.2rem;
+  --rg-fs-xl: 1.6rem;
+  --rg-fw-medium: 600;
+  --rg-fw-bold: 700;
+  --rg-fw-black: 800;
+  --rg-tracking-wide: 0.14em;
+
+  /* ===== Spacing ===== */
+  --rg-space-1: 4px;
+  --rg-space-2: 8px;
+  --rg-space-3: 12px;
+  --rg-space-4: 16px;
+  --rg-space-5: 20px;
+  --rg-space-6: 24px;
+  --rg-space-8: 32px;
+  --rg-space-10: 40px;
+  --rg-space-12: 48px;
+
+  /* ===== Radius ===== */
+  --rg-radius-sm: 10px;
+  --rg-radius: 16px;
+  --rg-radius-lg: 22px;
+  --rg-radius-xl: 28px;
+  --rg-radius-pill: 999px;
+
+  /* ===== Shadows ===== */
+  --rg-shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.30);
+  --rg-shadow: 0 16px 36px rgba(0, 0, 0, 0.40);
+  --rg-shadow-lg: 0 28px 60px rgba(0, 0, 0, 0.50);
+  --rg-shadow-accent: 0 14px 30px rgba(230, 49, 74, 0.30);
+
+  /* ===== Layout ===== */
+  --rg-container: 1280px;
+  --rg-gutter: 24px;
+}

@@ -20,7 +20,12 @@ export const imageCatalog = {
   memberFemaleDefault: '/images/member-female-default.jpg',
   facilityWeights: '/images/facility-weights.jpg',
   facilityCardio: '/images/facility-cardio.jpg',
-  facilityReception: '/images/facility-reception.jpg'
+  facilityReception: '/images/facility-reception.jpg',
+  classHiit: '/images/class-hiit.jpg',
+  classStrength: '/images/class-strength.jpg',
+  classYoga: '/images/class-yoga.jpg',
+  classCardio: '/images/class-cardio.jpg',
+  ctaBanner: '/images/cta-join.jpg'
 };
 
 export const eventImagePool = [

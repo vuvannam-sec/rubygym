@@ -25,16 +25,23 @@ describe('Auth Routes', () => {
         email: 'new.member@rubygym.com',
         password: 'member123',
         full_name: 'New Member',
-        phone: '0909999999'
+        phone: '0909999999',
+        current_weight: 68.5,
+        height_cm: 172
       });
 
     expect(res.statusCode).toBe(201);
     expect(res.body.message).toBe('User registered');
     expect(res.body.userId).toBe(11);
     expect(res.body.memberId).toBe(7);
+    expect(res.body.current_bmi).toBe(23.15);
     expect(pool.execute).toHaveBeenCalledWith(
       'INSERT INTO users (email, password_hash, full_name, phone, role) VALUES (?, ?, ?, ?, ?)',
       expect.arrayContaining(['new.member@rubygym.com', expect.any(String), 'New Member', '0909999999', 'MEMBER'])
+    );
+    expect(pool.execute).toHaveBeenCalledWith(
+      'INSERT INTO members (user_id, trainer_id, join_date, current_weight, height_cm, is_loyal, referred_by) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      expect.arrayContaining([11, null, expect.any(String), 68.5, 172, 0, null])
     );
   });
 
@@ -54,6 +61,8 @@ describe('Auth Routes', () => {
         password: 'member123',
         full_name: 'Referral Member',
         phone: '0908888888',
+        current_weight: 72.3,
+        height_cm: 174,
         trainer_id: 3,
         referral_code: 'RUBY-9'
       });

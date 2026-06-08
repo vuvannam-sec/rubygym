@@ -77,11 +77,12 @@ Jobs:
 - Backend install and test.
 - Frontend install, test, and build.
 - Docker Compose validation and build.
-- Semgrep SAST.
-- Trivy image scan.
-- OWASP ZAP baseline DAST.
+- Semgrep SAST (quality gate on application code).
+- SAST detection demo (scans the intentionally vulnerable file, non-blocking).
+- Trivy image scan (report + gate on Critical/High).
+- OWASP ZAP baseline DAST (informational).
 
-The workflow uploads scanner reports as artifacts. ZAP warning exit code 2 is recorded and allowed, while execution errors above 2 fail the job.
+The workflow uploads scanner reports as artifacts. Per ADR-004 / NFR-SEC-07, Semgrep and Trivy fail the build on Critical/High findings in the real application code (the `vulnerable-demo.js` teaching file is excluded from the gate and scanned in a separate non-blocking job). ZAP baseline is informational: warning exit code 2 is recorded and allowed, while execution errors above 2 fail the job.
 
 ## 7. Semgrep SAST
 
@@ -221,12 +222,12 @@ Generated evidence:
 - Frontend still has 28 npm audit findings because `react-scripts` transitive fixes require breaking migration.
 - Demo secrets remain in Docker Compose for classroom local setup and must not be used in production.
 - Main route error handling still often returns raw `err.message`.
-- GitHub Actions passed after the workflow was pushed. Future runs should still be checked because scanner databases and action runtimes change over time.
+- No GitHub-hosted Actions run was executed from this local environment; workflow YAML was parsed locally and commands were run manually.
 
 ## 14. Future Improvements
 
 Recommended next work:
-- Monitor GitHub Actions after each submission push and rerun `workflow_dispatch` when fresh evidence is required.
+- Push the workflow to GitHub and run `workflow_dispatch`.
 - Add audit logging for authentication, subscription, schedule, evaluation, and admin changes.
 - Add express rate limiting.
 - Add validation middleware such as Joi, Zod, or express-validator.

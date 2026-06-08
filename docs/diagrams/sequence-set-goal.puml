@@ -1,0 +1,34 @@
+@startuml SetGoal_Sequence
+title RubyGYM - Set Training Goal (Member-owned)
+
+actor Member
+actor Trainer
+participant "Frontend" as FE
+participant "Backend" as BE
+database "MySQL" as DB
+
+== Member sets/updates own goal ==
+Member -> FE: Open Goals page, fill goal form
+FE -> BE: PUT /api/goals/me\n{goal_type, target_weight, target_bmi, target_date, notes}
+BE -> BE: Authorize role == MEMBER (own member only)
+BE -> DB: INSERT ... ON DUPLICATE KEY UPDATE training_goals\n(UNIQUE member_id)
+DB --> BE: ok
+BE --> FE: 200 {goal saved}
+FE --> Member: Show "Đã lưu mục tiêu"
+
+== Trainer reads goal (read-only) ==
+Trainer -> FE: Open monthly evaluation for a client
+FE -> BE: GET /api/goals/member/:memberId
+BE -> BE: Authorize: Trainer owns this member
+alt Trainer is owner or Admin
+  BE -> DB: SELECT training_goals WHERE member_id
+  DB --> BE: goal
+  BE --> FE: 200 {goal} (read-only)
+else not owner
+  BE --> FE: 403 Access denied
+end
+note over BE
+ADR-001: Trainer/Admin cannot modify a member's goal.
+PUT /api/goals/member/:id is rejected for non-member roles.
+end note
+@enduml

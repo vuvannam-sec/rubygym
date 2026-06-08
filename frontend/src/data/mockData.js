@@ -171,3 +171,115 @@ export const referralData = {
     { id: 3, name: 'Lê Tuấn Anh', status: 'Đã gửi lời mời', joinedAt: '08/04/2026' }
   ]
 };
+
+// ===== Public landing content (real-gym sections) =====
+
+export const membershipPlans = [
+  {
+    id: 'QUARTERLY',
+    name: 'Gói 3 tháng',
+    months: 3,
+    price: '4.200.000đ',
+    perMonth: '~1.400.000đ/tháng',
+    tagline: 'Khởi động hành trình',
+    perks: [
+      'Tự do tập mọi khu vực trong giờ mở cửa',
+      'Buổi định hướng & đo chỉ số ban đầu',
+      'Tham gia sự kiện cộng đồng hằng tháng'
+    ],
+    featured: false
+  },
+  {
+    id: 'SEMI_ANNUAL',
+    name: 'Gói 6 tháng',
+    months: 6,
+    price: '7.500.000đ',
+    perMonth: '~1.250.000đ/tháng',
+    tagline: 'Lựa chọn phổ biến',
+    perks: [
+      'Toàn bộ quyền lợi gói 3 tháng',
+      'Đánh giá thể chất cùng HLV hằng tháng',
+      'Ưu tiên đặt lịch khung giờ cao điểm'
+    ],
+    featured: true
+  },
+  {
+    id: 'ANNUAL',
+    name: 'Gói 12 tháng',
+    months: 12,
+    price: '13.200.000đ',
+    perMonth: '~1.100.000đ/tháng',
+    tagline: 'Tiết kiệm nhất',
+    perks: [
+      'Toàn bộ quyền lợi gói 6 tháng',
+      'Trở thành hội viên thân thiết sau 1 năm',
+      'Tặng 3 tháng khi gia hạn tiếp gói 1 năm'
+    ],
+    featured: false
+  }
+];
+
+export const gymClasses = [
+  {
+    id: 'hiit',
+    name: 'HIIT đốt mỡ',
+    description: 'Bài tập cường độ cao ngắt quãng giúp đốt calo tối đa, phù hợp người bận rộn.',
+    level: 'Mọi cấp độ',
+    image: imageCatalog.classHiit
+  },
+  {
+    id: 'strength',
+    name: 'Strength & Tăng cơ',
+    description: 'Giáo án tạ tự do và compound lifts để xây dựng sức mạnh và khối cơ bền vững.',
+    level: 'Cơ bản → Nâng cao',
+    image: imageCatalog.classStrength
+  },
+  {
+    id: 'yoga',
+    name: 'Yoga & Phục hồi',
+    description: 'Cải thiện sự dẻo dai, giảm căng thẳng và phục hồi cơ sau những buổi tập nặng.',
+    level: 'Mọi cấp độ',
+    image: imageCatalog.classYoga
+  },
+  {
+    id: 'cardio',
+    name: 'Cardio & Sức bền',
+    description: 'Khu máy chạy, xe đạp và rower cho các buổi nâng cao thể lực tim mạch.',
+    level: 'Mọi cấp độ',
+    image: imageCatalog.classCardio
+  }
+];
+
+export const testimonials = [
+  {
+    id: 1,
+    name: 'Nguyễn Thu Trang',
+    result: 'Giảm 6kg trong 3 tháng',
+    quote: 'HLV xây lộ trình rõ ràng và bám sát từng tuần. Lần đầu mình tập gym mà không thấy nản.',
+    image: imageCatalog.memberFemaleDefault
+  },
+  {
+    id: 2,
+    name: 'Lê Minh Khoa',
+    result: 'Tăng 4kg cơ nạc',
+    quote: 'Khu tạ đầy đủ, lịch tập linh hoạt theo 3 ca sáng/chiều/tối nên mình luôn sắp xếp được.',
+    image: imageCatalog.memberMaleDefault
+  },
+  {
+    id: 3,
+    name: 'Đặng Khánh Vy',
+    result: 'Cải thiện sức bền rõ rệt',
+    quote: 'Đánh giá hằng tháng giúp mình thấy được tiến bộ bằng số liệu thật, rất có động lực.',
+    image: imageCatalog.memberFemaleDefault
+  }
+];
+
+export const contactInfo = {
+  address: '123 Nguyễn Văn Cừ, Quận 5, TP. Hồ Chí Minh',
+  phone: '1900 6868',
+  email: 'hello@rubygym.vn',
+  hours: [
+    { label: 'Thứ 2 - Chủ nhật', value: '05:00 - 20:00' },
+    { label: 'Nghỉ trưa', value: '11:30 - 13:30' }
+  ]
+};

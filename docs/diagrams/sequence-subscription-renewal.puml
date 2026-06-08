@@ -1,0 +1,35 @@
+@startuml SubscriptionRenewal_Sequence
+title RubyGYM - Subscription Register / Renewal (loyalty + referral bonus)
+
+actor Member
+participant "Frontend" as FE
+participant "Backend" as BE
+database "MySQL" as DB
+
+Member -> FE: Choose plan (3/6/12 months) + start date
+FE -> BE: POST /api/subscriptions {member_id, plan_type, start_date}
+BE -> BE: Authorize (member acts on own subscription)
+BE -> DB: SELECT members (join_date, is_loyal, pending_bonus_months)
+DB --> BE: member
+BE -> DB: SELECT existing subscriptions (is this a renewal?)
+DB --> BE: rows
+
+BE -> BE: base months = {QUARTERLY:3, SEMI_ANNUAL:6, ANNUAL:12}
+alt is_loyal AND renewal AND plan == ANNUAL
+  BE -> BE: + 3 loyalty bonus months
+end
+alt pending_bonus_months > 0
+  BE -> BE: + pending referral months
+  BE -> DB: UPDATE members SET pending_bonus_months = 0
+end
+BE -> BE: end_date = start_date + total months
+BE -> DB: INSERT INTO subscriptions (end_date, is_free_extension, status=ACTIVE)
+DB --> BE: subscriptionId
+BE --> FE: 200 {end_date, free_extension_months, referral_bonus_months}
+FE --> Member: Show new expiry + bonuses applied
+note over BE
+Referral: when a referred member joins, the referrer's
+active subscription is extended by 1 month, or stored in
+pending_bonus_months if no active subscription yet.
+end note
+@enduml

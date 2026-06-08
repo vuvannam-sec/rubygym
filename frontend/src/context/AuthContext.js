@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import api from '../services/api';
 
 const STORAGE_KEY = 'rubygym_auth';
@@ -39,10 +39,14 @@ const defaultDemoUsers = [
     full_name: 'Nguyen Hoang An',
     member_id: 1,
     trainer_id: 1,
+    current_weight: 68.5,
+    height_cm: 172,
+    current_bmi: 23.15,
     trainer_name: 'Tran Thu Linh',
     trainer_email: 'trainer.linh@rubygym.com',
     trainer_phone: '0901000002',
-    referral_code: 'RUBY-1'
+    referral_code: 'RUBY-1',
+    onboarding_completed: true
   }
 ];
 
@@ -55,6 +59,18 @@ const normalizeLoginCredentials = (credentials) => {
 };
 
 const shouldUseDemoFallback = (error) => !error?.response || error.response.status >= 500;
+
+const calculateBmi = (weight, heightCm) => {
+  const numericWeight = Number(weight);
+  const numericHeight = Number(heightCm);
+
+  if (!numericWeight || !numericHeight) {
+    return null;
+  }
+
+  const heightInMeters = numericHeight / 100;
+  return Number((numericWeight / (heightInMeters * heightInMeters)).toFixed(2));
+};
 
 const buildError = (message) => {
   const error = new Error(message);
@@ -95,6 +111,18 @@ const getDemoUsers = () => {
 
 export function AuthProvider({ children }) {
   const [auth, setAuth] = useState(getStoredAuth);
+
+  const refreshProfile = useCallback(async () => {
+    if (!auth.token || String(auth.token).startsWith('demo-token-')) {
+      return auth.user;
+    }
+
+    const { data } = await api.get('/auth/me');
+    const nextAuth = { token: auth.token, user: data };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextAuth));
+    setAuth(nextAuth);
+    return data;
+  }, [auth.token, auth.user]);
 
   useEffect(() => {
     const syncAuthProfile = async () => {
@@ -167,10 +195,14 @@ export function AuthProvider({ children }) {
           full_name: matchedUser.full_name,
           trainer_id: matchedUser.trainer_id,
           member_id: matchedUser.member_id,
+          current_weight: matchedUser.current_weight,
+          height_cm: matchedUser.height_cm,
+          current_bmi: matchedUser.current_bmi,
           trainer_name: matchedUser.trainer_name,
           trainer_email: matchedUser.trainer_email,
           trainer_phone: matchedUser.trainer_phone,
-          referral_code: matchedUser.referral_code
+          referral_code: matchedUser.referral_code,
+          onboarding_completed: matchedUser.onboarding_completed
         }
       };
 
@@ -199,9 +231,13 @@ export function AuthProvider({ children }) {
         password: payload.password,
         role: 'MEMBER',
         full_name: payload.full_name,
+        current_weight: payload.current_weight ? Number(payload.current_weight) : null,
+        height_cm: payload.height_cm ? Number(payload.height_cm) : null,
+        current_bmi: calculateBmi(payload.current_weight, payload.height_cm),
         trainer_id: payload.trainer_id ? Number(payload.trainer_id) : null,
         member_id: generatedId,
-        referral_code: `RUBY-${generatedId}`
+        referral_code: `RUBY-${generatedId}`,
+        onboarding_completed: false
       };
 
       const customUsers = demoUsers.filter(
@@ -215,7 +251,11 @@ export function AuthProvider({ children }) {
           id: newUser.id,
           email: newUser.email,
           role: newUser.role,
-          full_name: newUser.full_name
+          full_name: newUser.full_name,
+          current_weight: newUser.current_weight,
+          height_cm: newUser.height_cm,
+          current_bmi: newUser.current_bmi,
+          onboarding_completed: false
         }
       };
     }
@@ -232,8 +272,9 @@ export function AuthProvider({ children }) {
     isAuthenticated: Boolean(auth.token),
     login,
     register,
+    refreshProfile,
     logout
-  }), [auth]);
+  }), [auth, refreshProfile]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

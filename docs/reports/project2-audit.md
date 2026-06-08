@@ -10,7 +10,7 @@ This audit covers the RubyGYM backend, frontend, Docker deployment files, CI/CD 
 
 | Area | Status |
 |---|---|
-| Final Project 2 reports | Reviewed. Current acceptance evidence is captured in `project2-test-build-evidence.md`, `security-pipeline-analysis.md`, `security-writeup-en.md`, `stride-threat-model.md`, and `vulnerable-demo-analysis.md`. |
+| `docs/goal2.md` | Reviewed. Defines Project 2 acceptance criteria. |
 | `.github/workflows` | Did not exist initially. Added `project2-security-ci.yml`. |
 | `backend/package.json` | Reviewed. Scripts: `start`, `dev`, `test`. Backend tests use Jest and Supertest. |
 | `frontend/package.json` | Reviewed. Scripts: `start`, `build`, `test`, `eject`. Frontend uses CRA / `react-scripts`. |

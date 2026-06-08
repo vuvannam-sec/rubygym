@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FiCheck, FiCreditCard, FiEdit, FiEye, FiPlus, FiTrash2, FiX } from 'react-icons/fi';
-import { subscriptions as initialSubscriptions } from '../../data/mockData';
 import api from '../../services/api';
 import { normalizeApiError } from '../../services/fallbacks';
 import { ActionIconButton, EmptyState, Modal, Pagination, SectionHeader, StatusBadge, Toast } from '../Layout/ProductUI';
@@ -33,7 +32,7 @@ const defaultForm = {
 const dateOnly = (value) => (value ? String(value).slice(0, 10) : '');
 
 function SubscriptionStatus() {
-  const [subscriptions, setSubscriptions] = useState(initialSubscriptions);
+  const [subscriptions, setSubscriptions] = useState([]);
   const [members, setMembers] = useState([]);
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [page, setPage] = useState(1);
@@ -76,9 +75,10 @@ function SubscriptionStatus() {
       try {
         await loadSubscriptions();
       } catch (error) {
+        setSubscriptions([]);
         setToast({
           type: 'info',
-          title: 'Đang hiển thị dữ liệu mẫu',
+          title: 'Chưa tải được danh sách gói tập',
           message: normalizeApiError(error, 'Không tải được danh sách gói tập từ backend.')
         });
       }

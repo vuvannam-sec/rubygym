@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { FiGift, FiInbox, FiLink } from 'react-icons/fi';
-import { referralData } from '../../data/mockData';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { normalizeApiError } from '../../services/fallbacks';
@@ -8,7 +7,12 @@ import { EmptyState, LoadingPanel, SectionHeader, StatusBadge, Toast } from '../
 
 function ReferralPage() {
   const { user } = useAuth();
-  const [referral, setReferral] = useState(referralData);
+  const [referral, setReferral] = useState({
+    code: user?.referral_code || '',
+    link: user?.referral_code ? `https://rubygym.vn/invite/${user.referral_code}` : '',
+    reward: 'Mỗi lượt giới thiệu thành công sẽ được cộng thêm 1 tháng vào gói tập đang hiệu lực.',
+    friends: []
+  });
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
 
@@ -24,7 +28,7 @@ function ReferralPage() {
         setReferral({
           code: data.referral_code,
           link: data.referral_link,
-          reward: 'Mỗi hội viên đăng ký thành công sẽ được cộng thêm 1 tháng vào gói tập đang active.',
+          reward: 'Mỗi hội viên đăng ký thành công sẽ được cộng thêm 1 tháng vào gói tập đang hiệu lực.',
           friends: data.referred_members.map((member) => ({
             id: member.id,
             name: member.full_name,
@@ -35,7 +39,7 @@ function ReferralPage() {
       } catch (error) {
         setToast({
           type: 'info',
-          title: 'Đang hiển thị dữ liệu mẫu',
+          title: 'Chưa tải được dữ liệu giới thiệu',
           message: normalizeApiError(error, 'Không tải được thông tin giới thiệu từ backend.')
         });
       } finally {
@@ -71,8 +75,8 @@ function ReferralPage() {
             </StatusBadge>
           </div>
           <div className="referral-box">
-            <strong>{referral.code}</strong>
-            <p className="inline-icon-text"><FiLink /> {referral.link}</p>
+            <strong>{referral.code || 'Chưa có mã giới thiệu'}</strong>
+            <p className="inline-icon-text"><FiLink /> {referral.link || 'Mã sẽ xuất hiện khi hồ sơ hội viên được tạo.'}</p>
           </div>
         </article>
 

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FiBell, FiCheck, FiEdit, FiEye, FiPlus, FiTrash2, FiX } from 'react-icons/fi';
-import { events as initialEvents } from '../../data/mockData';
 import api from '../../services/api';
 import { normalizeApiError } from '../../services/fallbacks';
 import { getRotatedEventImage } from '../../services/imageUtils';
@@ -46,7 +45,7 @@ const parseDescription = (description) => {
 };
 
 function EventList() {
-  const [events, setEvents] = useState(initialEvents);
+  const [events, setEvents] = useState([]);
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const [toast, setToast] = useState(null);
@@ -81,9 +80,10 @@ function EventList() {
       try {
         await loadEvents();
       } catch (error) {
+        setEvents([]);
         setToast({
           type: 'info',
-          title: 'Đang hiển thị dữ liệu mẫu',
+          title: 'Chưa tải được danh sách sự kiện',
           message: normalizeApiError(error, 'Không tải được danh sách sự kiện từ backend.')
         });
       }

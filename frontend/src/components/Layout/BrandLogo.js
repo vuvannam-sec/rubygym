@@ -1,12 +1,21 @@
 import { Link } from 'react-router-dom';
+import { GiCutDiamond } from 'react-icons/gi';
 
 function BrandLogo({ to = '/', light = false, className = '', subtitle = '' }) {
   const classes = ['brand-logo', light ? 'brand-logo-light' : 'brand-logo-dark', className].filter(Boolean).join(' ');
 
   const content = (
     <>
-      <img src="/images/logo.png" alt="RubyGYM" className="brand-logo-img" />
-      {subtitle ? <span className="brand-subtitle">{subtitle}</span> : null}
+      <span className="brand-mark" aria-hidden="true">
+        <GiCutDiamond />
+      </span>
+      <span className="brand-text-wrap">
+        <span className="brand-text">
+          <span className="brand-ruby">Ruby</span>
+          <span className="brand-gym">GYM</span>
+        </span>
+        {subtitle ? <span className="brand-subtitle">{subtitle}</span> : null}
+      </span>
     </>
   );
 

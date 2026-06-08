@@ -1891,21 +1891,10 @@ tbody tr:hover {
 }
 
 /* ===== Brand logo image (Task: wire logo.png) ===== */
-.brand-logo {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-}
-
 .brand-logo-img {
   height: 42px;
   width: auto;
   max-width: 180px;
   object-fit: contain;
   display: block;
-}
-
-.sidebar .brand-logo-img {
-  height: 46px;
-  max-width: 200px;
 }

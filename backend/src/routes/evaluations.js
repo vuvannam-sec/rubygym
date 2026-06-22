@@ -308,7 +308,7 @@ router.put('/:id', authenticate, async (req, res) => {
   }
 });
 
-// Delete evaluation
+// Evaluation Deleted
 router.delete('/:id', authenticate, async (req, res) => {
   try {
     const allowed = await canAccessEvaluation(req, req.params.id);

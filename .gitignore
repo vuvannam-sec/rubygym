@@ -26,6 +26,9 @@ logs/
 coverage/
 .nyc_output/
 
+# Generated security reports
+/docs/reports/
+
 # OS / editor
 .DS_Store
 Thumbs.db

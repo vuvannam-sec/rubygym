@@ -1,109 +1,154 @@
 <div align="center">
 
-# RubyGYM 💎🏋️
+# RubyGYM
 
-**Hệ thống quản lý khách hàng & quảng bá cho trung tâm thể hình RubyGYM**
+**Gym customer management and promotion system**
+
+[![Project 2 Security CI](https://github.com/vuvannam-sec/rubygym/actions/workflows/project2-security-ci.yml/badge.svg)](https://github.com/vuvannam-sec/rubygym/actions/workflows/project2-security-ci.yml)
+![React](https://img.shields.io/badge/React-19.2-20232A?logo=react)
+![Node.js](https://img.shields.io/badge/Node.js-24-339933?logo=nodedotjs&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?logo=mysql&logoColor=white)
 
 Project 12 — Công nghệ phần mềm · Project 2 — An toàn ứng dụng web & CI/CD security
 
 </div>
 
----
+RubyGYM là ứng dụng web phục vụ một trung tâm thể hình giả lập, tập trung vào hai mục tiêu học thuật: xây dựng phần mềm theo quy trình có truy vết và triển khai các kiểm soát AppSec trong CI/CD. Repo được giữ ở phạm vi classroom MVP; các chức năng thanh toán, email/SMS và tích hợp thiết bị không nằm trong phạm vi hiện tại.
 
-## 1. Giới thiệu
+## Course alignment
 
-RubyGYM là ứng dụng web giúp trung tâm thể hình quản lý huấn luyện viên, hội viên, lịch tập, đánh giá theo tháng, gói hội viên và sự kiện; đồng thời quảng bá trung tâm tới khách truy cập. Dự án phục vụ hai học phần:
+| Học phần | Trọng tâm | Bằng chứng trong repo |
+| --- | --- | --- |
+| **Project 12 — Công nghệ phần mềm** | Yêu cầu, thiết kế, lập trình, kiểm thử, tài liệu | `docs/software-engineering-plan.md`, UML/ERD trong `docs/diagrams/`, backend tests, Docker Compose |
+| **Project 2 — An toàn ứng dụng web** | SAST, DAST, container scanning, threat modeling | `.github/workflows/project2-security-ci.yml`, Semgrep, Trivy, OWASP ZAP, `docs/stride-threat-model.md` |
 
-- **Project 12 (Công nghệ phần mềm):** quy trình SE đầy đủ — yêu cầu, thiết kế, lập trình, kiểm thử, tài liệu.
-- **Project 2 (An toàn ứng dụng web):** tích hợp SAST/DAST/Container Scanning vào CI/CD và threat model STRIDE.
+Chi tiết mapping giữa yêu cầu, code và test nằm tại [`docs/requirements-traceability.md`](docs/requirements-traceability.md).
 
-## 2. Công nghệ
+## Chức năng chính
 
-| Lớp | Công nghệ |
-|---|---|
-| Frontend | React 18 (CRA), React Router, design tokens CSS |
-| Backend | Node.js + Express, JWT, bcrypt |
+- Quản lý tài khoản và phân quyền `ADMIN`, `TRAINER`, `MEMBER`.
+- Quản lý huấn luyện viên, hội viên và quan hệ phân công.
+- Lập lịch tập với giới hạn giờ mở cửa, thời lượng buổi, tải làm việc của HLV và số hội viên/buổi.
+- Hội viên tự đặt mục tiêu tập luyện; HLV sử dụng mục tiêu đó khi đánh giá tiến độ.
+- Đánh giá theo tháng dựa trên cân nặng, BMI và mục tiêu cá nhân.
+- Gói hội viên 3/6/12 tháng, loyalty bonus và referral bonus.
+- Trang công khai cho chương trình, HLV, sự kiện và đăng ký.
+
+## Kiến trúc
+
+```mermaid
+flowchart LR
+    U[Browser] --> F[React SPA / Nginx]
+    F -->|REST / JSON| B[Express API]
+    B --> D[(MySQL 8)]
+
+    G[GitHub Actions] --> T[Tests]
+    G --> S[Semgrep SAST]
+    G --> V[Trivy image scan]
+    G --> Z[OWASP ZAP baseline]
+```
+
+| Layer | Technology |
+| --- | --- |
+| Frontend | React 19, React Router, Axios, CSS design tokens |
+| Backend | Node.js, Express 5, JWT, bcrypt |
 | Database | MySQL 8 |
-| Triển khai | Docker + Docker Compose, Nginx |
-| CI/CD bảo mật | GitHub Actions + Semgrep (SAST), Trivy (container), OWASP ZAP (DAST) |
+| Runtime | Docker, Docker Compose, Nginx |
+| Security CI | GitHub Actions, Semgrep, Trivy, OWASP ZAP |
 
-## 3. Chức năng chính
+## Quick start
 
-- Quản lý huấn luyện viên và phân công hội viên (chọn HLV hoặc để trung tâm chỉ định).
-- Lập lịch tập với ràng buộc: ≤ 2h/buổi, giờ mở cửa 05:00–20:00 (nghỉ trưa 11:30–13:30), ≤ 8h/ngày/HLV, ≤ 3 hội viên/buổi, hội viên ≤ 3 buổi/ngày (sáng/chiều/tối).
-- **Mục tiêu tập luyện do hội viên tự đặt** (nguồn duy nhất); HLV chỉ đọc để đánh giá (xem ADR-001).
-- Đánh giá theo tháng dựa trên cân nặng, BMI và so với mục tiêu.
-- Gói hội viên 3/6/12 tháng; ưu đãi hội viên thân thiết (+3 tháng) và giới thiệu bạn (+1 tháng).
-- Trang công khai: chương trình, bảng giá, HLV, cơ sở vật chất, sự kiện, liên hệ.
-
-## 4. Vai trò & phân quyền
-
-`ADMIN` (vận hành trung tâm) · `TRAINER` (quản lý học viên, lịch, đánh giá) · `MEMBER` (lịch, mục tiêu, gói, kết quả) · `Guest` (xem trang công khai, đăng ký).
-
-## 5. Chạy dự án (Docker)
+Yêu cầu: Docker Engine/Desktop có hỗ trợ Docker Compose.
 
 ```bash
+git clone https://github.com/vuvannam-sec/rubygym.git
+cd rubygym
+cp .env.example .env
 docker compose up -d --build
 ```
 
-| Dịch vụ | Địa chỉ |
-|---|---|
+| Service | URL |
+| --- | --- |
 | Frontend | http://localhost:8080 |
 | Backend API | http://localhost:3000/api |
+| Health check | http://localhost:3000/api/health |
 | MySQL | localhost:3306 |
 
-Dừng: `docker compose down` (thêm `-v` nếu muốn xoá dữ liệu DB).
+Dừng stack:
 
-### Tài khoản demo (dữ liệu seed)
+```bash
+docker compose down
+# Xóa luôn volume/data của môi trường local nếu cần:
+docker compose down -v
+```
 
-| Vai trò | Email | Mật khẩu |
-|---|---|---|
+> `.env.example` chỉ chứa giá trị mẫu cho môi trường local. Không dùng các giá trị này cho deployment thật.
+
+### Demo accounts
+
+| Role | Email | Password |
+| --- | --- | --- |
 | Admin | `admin@rubygym.com` | `admin123` |
 | Trainer | `trainer.linh@rubygym.com` | `trainer123` |
 | Member | `member.an@rubygym.com` | `member123` |
 
-> Thông tin trong `docker-compose.yml` (mật khẩu DB, JWT secret) chỉ dùng cho môi trường demo cục bộ.
+Các tài khoản trên được tạo từ `docker/seed.sql` và chỉ dùng cho demo/classroom environment.
 
-## 6. Phát triển cục bộ (không Docker)
+## Local development
 
 ```bash
-# Backend
-cd backend && npm install && npm run dev      # cần MySQL chạy sẵn
+# Backend — cần MySQL chạy sẵn và biến môi trường phù hợp
+cd backend
+npm install
+npm run dev
+
 # Frontend
-cd frontend && npm install && npm start
+cd frontend
+npm install
+npm start
 ```
 
-## 7. Kiểm thử
+## Testing
 
 ```bash
-cd backend && npm test      # Jest + Supertest (DB mocked) — 8 suites / 32 tests
+cd backend && npm test
 cd frontend && CI=true npm test -- --watchAll=false
 ```
 
-## 8. Tài liệu (thư mục `docs/`)
+Security workflow còn chạy Docker build, Semgrep, Trivy và ZAP trên GitHub Actions.
 
-| Tài liệu | Mô tả |
-|---|---|
-| `docs/reports/SRS.md` | Đặc tả yêu cầu phần mềm |
-| `docs/reports/architecture-decisions.md` | Nhật ký quyết định kiến trúc (ADR) |
-| `docs/reports/final-requirement-traceability.md` | Ma trận truy vết yêu cầu ↔ test |
-| `docs/reports/design-system.md` | Hệ thống thiết kế (design tokens) |
-| `docs/reports/stride-threat-model.md` | Threat model STRIDE (Project 2) |
-| `docs/reports/security-pipeline-analysis.md` | Phân tích pipeline bảo mật |
-| `docs/diagrams/*.puml` | Use case, class, ERD, sequence, activity (xem `docs/diagrams/README.md`) |
+## Security lab design
 
-## 9. Bảo mật & CI/CD (Project 2)
+`backend/src/routes/vulnerable-demo.js` là **fixture cố ý chứa lỗi** để chứng minh SAST có thể phát hiện SQL injection, XSS, hardcoded credential pattern, path traversal, insecure random và `eval`. File này không được mount vào Express application runtime; workflow quét riêng ở job non-blocking, trong khi application code thật vẫn chịu SAST gate.
 
-GitHub Actions (`.github/workflows/project2-security-ci.yml`) chạy: test backend/frontend → build Docker → **Semgrep SAST (gate)** → **SAST detection demo** (chứng minh phát hiện trên file lỗ hổng mẫu, không chặn) → **Trivy** (gate Critical/High) → **OWASP ZAP** baseline (thông tin). Chi tiết chính sách: ADR-004.
+Xem thêm [`SECURITY.md`](SECURITY.md) và [`docs/stride-threat-model.md`](docs/stride-threat-model.md).
 
-## 10. Cấu trúc thư mục
+## Repository layout
 
-```
+```text
 rubygym/
-├─ backend/          # Express API (routes, middlewares, config) + tests
-├─ frontend/         # React app (components, services, styles/tokens.css)
-├─ docker/           # init.sql, seed.sql
-├─ docs/             # SRS, ADR, reports, slides, diagrams
-├─ .github/workflows # CI/CD bảo mật
-└─ docker-compose.yml
+├── .github/
+│   └── workflows/              # CI/CD + security scanning
+├── backend/
+│   ├── src/                    # Express API, middleware, routes
+│   └── tests/                  # Jest + Supertest
+├── frontend/                   # React SPA
+├── docker/                     # schema + seed data
+├── docs/
+│   ├── diagrams/               # PlantUML sources + rendered diagrams
+│   ├── architecture-decisions.md
+│   ├── requirements-traceability.md
+│   ├── software-engineering-plan.md
+│   └── stride-threat-model.md
+├── .env.example
+├── docker-compose.yml
+└── README.md
 ```
+
+## Documentation
+
+Bắt đầu từ [`docs/README.md`](docs/README.md) để xem index tài liệu. Các JSON/HTML report tạo bởi Semgrep, Trivy và ZAP được lưu dưới dạng GitHub Actions artifacts thay vì commit vào repository.
+
+## Scope notes
+
+Đây là đồ án học thuật, không phải hệ thống production. Payment gateway, notification delivery, biometric/device integration và attendance hardware được cố ý loại khỏi MVP. Các quyết định kiến trúc chính được ghi tại [`docs/architecture-decisions.md`](docs/architecture-decisions.md).

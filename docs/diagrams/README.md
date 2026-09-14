@@ -1,34 +1,39 @@
 # RubyGYM Diagrams
 
-Bộ sơ đồ UML/ERD cho Project 12 (Công nghệ phần mềm), đã đồng bộ với mã nguồn sau đợt refactor (xem `../reports/architecture-decisions.md`).
+Bộ sơ đồ UML/ERD cho Project 12 (Công nghệ phần mềm). Các sơ đồ phải được giữ đồng bộ với requirement và quyết định kiến trúc trong [`../software-engineering-plan.md`](../software-engineering-plan.md) và [`../architecture-decisions.md`](../architecture-decisions.md).
 
 ## Danh mục
 
 | File | Loại | Nội dung |
-|---|---|---|
-| `usecase.puml` | Use case (tổng quát) | Toàn bộ chức năng theo 4 actor Guest/Member/Trainer/Admin. "Set Training Goals" thuộc **Member**. |
-| `usecase-full.puml` / `usecase-full-simplified.puml` | Use case (đầy đủ) | Bản chi tiết; ghi rõ Trainer **không** sửa mục tiêu của Member. |
-| `usecase-selected.puml` | Use case (chọn lọc) | 6 use case trọng tâm để nộp: quản lý hội viên, đăng ký/gia hạn, tạo buổi tập, xem lịch, đánh giá tháng, **đặt mục tiêu (Member)**. |
-| `class.puml` | Class diagram | Gồm `TrainingGoal` (Member sở hữu/sets, Trainer read-only). |
-| `relational-schema.puml` / `relational-schema-simplified.puml` | ERD | Khớp `docker/init.sql` (training_goals UNIQUE member_id, monthly_evaluations UNIQUE member+month). |
-| `sequence-login.puml` | Sequence | Đăng nhập + JWT. |
-| `sequence-onboarding.puml` | Sequence | Onboarding = metrics + gói + HLV (KHÔNG ghi goal — ADR-002). |
-| `sequence-set-goal.puml` | Sequence | Member tự đặt mục tiêu; Trainer/Admin chỉ đọc (ADR-001). |
-| `sequence-create-session.puml` | Sequence | Tạo buổi tập + ràng buộc lịch (≤2h, giờ mở cửa, ≤8h/ngày, ≤3 hội viên). |
-| `sequence-monthly-evaluation.puml` | Sequence | Đánh giá tháng: HLV nhập actual, target lấy từ goal của Member. |
-| `sequence-subscription-renewal.puml` | Sequence | Đăng ký/gia hạn + bonus loyal (3 tháng) + referral (1 tháng/người). |
-| `activity-registration.puml` | Activity | Đăng ký → onboarding (metrics+gói+HLV) → đặt mục tiêu (bước riêng). |
+| --- | --- | --- |
+| `usecase.puml` | Use case tổng quát | Chức năng theo 4 actor Guest / Member / Trainer / Admin |
+| `usecase-full.puml` / `usecase-full-simplified.puml` | Use case đầy đủ | Bản chi tiết; thể hiện ownership của training goal |
+| `usecase-selected.puml` | Use case chọn lọc | Các use case trọng tâm phục vụ bài nộp |
+| `class.puml` | Class diagram | Domain entities và quan hệ chính |
+| `relational-schema.puml` / `relational-schema-simplified.puml` | ERD | Schema quan hệ đồng bộ với `docker/init.sql` |
+| `sequence-login.puml` | Sequence | Login + JWT |
+| `sequence-onboarding.puml` | Sequence | Onboarding: body metrics + package + trainer preference |
+| `sequence-set-goal.puml` | Sequence | Member tự đặt training goal |
+| `sequence-create-session.puml` | Sequence | Tạo buổi tập và các scheduling constraints |
+| `sequence-monthly-evaluation.puml` | Sequence | Trainer đánh giá tiến độ dựa trên goal của member |
+| `sequence-subscription-renewal.puml` | Sequence | Gia hạn, loyalty bonus và referral bonus |
+| `activity-registration.puml` | Activity | Registration → onboarding → set goal |
 
-## Cách render ra PNG
-
-Máy hiện không cài sẵn PlantUML/Java. Có thể render bằng một trong các cách:
+## Render PlantUML
 
 ```bash
-# 1) PlantUML jar (cần Java + Graphviz)
+# Cách 1: PlantUML jar
 java -jar plantuml.jar docs/diagrams/*.puml
 
-# 2) Docker (không cần cài Java)
-docker run --rm -v "$PWD/docs/diagrams:/work" -w /work plantuml/plantuml "*.puml"
+# Cách 2: Docker
+docker run --rm \
+  -v "$PWD/docs/diagrams:/work" \
+  -w /work \
+  plantuml/plantuml "*.puml"
 ```
 
-Hoặc dùng plugin PlantUML cho VS Code / IntelliJ, hoặc trang web https://www.plantuml.com/plantuml để xem nhanh.
+Có thể dùng extension PlantUML cho VS Code/IntelliJ để preview trong lúc chỉnh sửa.
+
+## Maintenance rule
+
+Khi thay đổi actor, ownership, domain relationship hoặc business flow, cập nhật `.puml` liên quan trong cùng pull request. File PNG là bản render để đọc nhanh; `.puml` mới là source of truth.

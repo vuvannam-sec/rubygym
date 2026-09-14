@@ -80,7 +80,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ADR-004: fail the build on findings in REAL application code.
+      # ADR-004: fail the build on findings in real application code.
       # The intentional teaching file vulnerable-demo.js is excluded here and
       # scanned separately in the non-blocking "SAST detection demo" job.
       - name: Run Semgrep (fail on findings)
@@ -100,6 +100,7 @@ jobs:
           name: semgrep-results
           path: docs/reports/semgrep-results.json
           if-no-files-found: warn
+          retention-days: 7
 
   semgrep-detection-demo:
     name: SAST detection demo (vulnerable-demo, non-blocking)
@@ -133,6 +134,7 @@ jobs:
           name: semgrep-vulnerable-demo
           path: docs/reports/semgrep-vulnerable-demo.json
           if-no-files-found: warn
+          retention-days: 7
 
   trivy-image-scan:
     name: Trivy image scan
@@ -175,6 +177,7 @@ jobs:
           name: trivy-image-results
           path: docs/reports/trivy-rubygym-*.json
           if-no-files-found: warn
+          retention-days: 7
 
   zap-baseline-dast:
     name: OWASP ZAP baseline DAST
@@ -222,3 +225,4 @@ jobs:
             docs/reports/zap-baseline.*
             docs/reports/zap-exit-code.txt
           if-no-files-found: warn
+          retention-days: 7
